@@ -23,7 +23,6 @@ jobs:
         run: npm ci
 
       - name: Obfuscate JS
-        run: node obfuscate-www.js
 
       - name: Build Windows EXE
         run: npm run build-win
