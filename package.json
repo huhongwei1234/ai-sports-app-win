@@ -1,0 +1,57 @@
+{
+  "name": "ai-sports-app",
+  "version": "1.0.0",
+  "description": "AI体育管理系统",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-mac": "electron-builder --mac",
+    "build-win": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.xlh.ai-sports-app",
+    "productName": "AI体育管理系统",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "db.js",
+      "sqlite-db.js",
+      "photo.js",
+      "config.json",
+      "logo.jpg",
+      "_internal/**/*",
+      "data/**/*"
+    ],
+    "asarUnpack": [
+      "_internal/www/logo.jpg",
+      "_internal/www/config.json"
+    ],
+    "electronDist": "./node_modules/electron/dist",
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "logo.jpg",
+      "category": "public.app-category.utilities",
+      "identity": null
+    }
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "electron": "^28.3.3",
+    "electron-builder": "^26.8.1",
+    "electron-packager": "^17.1.2",
+    "javascript-obfuscator": "^5.4.3"
+  },
+  "author": "XLH",
+  "license": "ISC",
+  "dependencies": {
+    "sqlite3": "^6.0.1"
+  }
+}

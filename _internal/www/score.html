@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>成绩分析 - AI体育</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .card-header {
+            padding: 10px 14px;
+            border-bottom: 1px solid #edf2f7;
+            background: #f8fafc;
+        }
+
+        .card-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .status-badge.connected { background: #d4edda; color: #155724; }
+        .status-badge.disconnected { background: #f8d7da; color: #721c24; }
+        .status-badge.connecting { background: #fff3cd; color: #856404; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 16px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-card.blue { background: linear-gradient(135deg, #1e3c72, #2a5298); }
+        .stat-card.green { background: linear-gradient(135deg, #4CAF50, #8BC34A); }
+        .stat-card.orange { background: linear-gradient(135deg, #ff9800, #ffc107); }
+        .stat-card.red { background: linear-gradient(135deg, #f44336, #e91e63); }
+
+        .stat-title {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .search-box {
+            padding: 10px;
+            background: #f9fbfe;
+            border-bottom: 1px solid #eef2f8;
+        }
+
+        .search-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .search-input-group input, .search-input-group select {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid #cfdfed;
+            border-radius: 28px;
+            font-size: 0.85rem;
+            background: white;
+        }
+
+        .search-input-group button {
+            background: #2c6e9e;
+            border: none;
+            padding: 0 24px;
+            border-radius: 32px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .search-input-group button:hover {
+            background: #1f557c;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            padding: 6px 16px;
+            font-size: 12px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .btn-sm:hover {
+            background: #c0c0c0;
+        }
+
+        .real-time-log {
+            background: #1e1e2e;
+            color: #00ff88;
+            border-radius: 12px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 11px;
+            max-height: 150px;
+            overflow: auto;
+        }
+
+        .real-time-log .log-item {
+            padding: 4px 0;
+            border-bottom: 1px solid #333;
+            font-size: 11px;
+        }
+
+        /* 实时成绩表格 */
+        .realtime-table-container {
+            overflow-x: auto;
+            padding: 0 12px 10px 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .realtime-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .realtime-table th,
+        .realtime-table td {
+            padding: 8px 6px;
+            text-align: left;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .realtime-table th {
+            background: #f8f9fa;
+            color: #666;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .realtime-badge {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .score-table-container {
+            overflow-x: auto;
+            padding: 0 12px 10px 12px;
+        }
+
+        .score-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .score-table th,
+        .score-table td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 13px;
+        }
+
+        .score-table th {
+            background: #f8f9fa;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-excellent { background: #d4edda; color: #2e7d32; }
+        .badge-good { background: #d1ecf1; color: #0c5460; }
+        .badge-pass { background: #fff3cd; color: #856404; }
+        .badge-fail { background: #f8d7da; color: #721c24; }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #8c9ab0;
+            font-size: 0.8rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #2c6e9e;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 15px;
+            border-top: 1px solid #edf2f7;
+        }
+
+        .page-btn {
+            padding: 5px 12px;
+            border: 1px solid #cfdfed;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .page-btn.active {
+            background: #2c6e9e;
+            color: white;
+            border-color: #2c6e9e;
+        }
+
+        @media (max-width: 780px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .search-input-group { flex-direction: column; }
+            .search-input-group button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🏃 AI体育<span>成绩分析</span></div>
+        <div class="nav-links">
+            <button class="nav-btn" onclick="location.href='index.html'">数据看板</button>
+            <button class="nav-btn" onclick="location.href='student.html'">学生管理</button>
+            <button class="nav-btn active" onclick="location.href='score.html'">成绩分析</button>
+            <button class="nav-btn" onclick="location.href='video.html'">视频回放</button>
+            <button class="nav-btn" onclick="location.href='camera.html'">底库管理</button>
+        </div>
+        <div class="user-info">
+            <span class="school-name-display" id="schoolNameDisplay"></span>
+            <img class="logo-img" src="./logo.jpg" alt="logo" onerror="this.style.display='none'">
+        </div>
+    </div>
+
+    <div class="back-home">
+        <a href="index.html" class="back-home-btn">🏠 返回首页</a>
+    </div>
+
+    <div class="container">
+        <!-- WebSocket 实时数据卡片 -->
+        <div class="card">
+            <div class="card-header" style="display:flex; align-items:center; flex-wrap:nowrap; gap:8px;">
+                <h3 style="white-space:nowrap; flex-shrink:0;">🔌 实时数据监控</h3>
+                <span id="wsStatus" class="status-badge connecting" style="flex-shrink:0;">⏳ 连接中...</span>
+                <div class="btn-group" style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; align-items:center;">
+                    <button class="btn-sm" id="connectBtn" style="font-size:14px; padding:6px 14px;">🔗 连接</button>
+                    <button class="btn-sm" id="disconnectBtn" style="font-size:14px; padding:6px 14px;">🔌 断开</button>
+                    <button class="btn-sm" id="clearLogBtn" style="font-size:14px; padding:6px 14px;">🗑️ 清空日志</button>
+                    <button class="btn-sm" id="clearDataBtn" style="font-size:14px; padding:6px 14px;">📊 清空数据</button>
+                </div>
+            </div>
+            <div id="wsLog" class="real-time-log" style="margin-top:4px;">
+                <div class="log-item">📡 等待连接...</div>
+            </div>
+        </div>
+
+        <!-- 实时成绩数据卡片 -->
+        <div class="card">
+            <div class="card-header">
+                <h3>⚡ 实时成绩数据</h3>
+                <span id="realtimeCount">0条</span>
+            </div>
+            <div class="realtime-table-container">
+                <table class="realtime-table" id="realtimeTable">
+                    <thead>
+                        <tr><th>时间</th><th>学号</th><th>姓名</th><th>运动项目</th><th>成绩</th><th>评级</th></tr>
+                    </thead>
+                    <tbody id="realtimeTableBody">
+                        <tr><td colspan="6" style="text-align:center; padding:20px;">暂无实时数据，等待WebSocket推送...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 查询表单 -->
+        <div class="card">
+            <div class="card-header">
+                <h3>🔍 成绩查询</h3>
+            </div>
+            <div class="search-box" style="border-bottom: none;">
+                <div class="search-input-group">
+                    <input type="text" id="searchUid" placeholder="学号/UID" value="">
+                    <input type="text" id="searchName" placeholder="姓名" value="">
+                    <select id="searchSport">
+                        <option value="" selected>全部项目</option>
+                        <optgroup label="🏃 跑步类">
+                            <option value="E-2-1">50米短跑</option>
+                            <option value="E-2-2">100米短跑</option>
+                            <option value="E-2-3">800米长跑</option>
+                            <option value="E-2-4">1000米长跑</option>
+                            <option value="E-2-8">自由跑</option>
+                            <option value="E-2-9">方阵跑</option>
+                            <option value="E-2-16">50×8折返跑</option>
+                        </optgroup>
+                        <optgroup label="💪 素质类">
+                            <option value="E-1-1">仰卧起坐</option>
+                            <option value="E-1-2">引体向上</option>
+                            <option value="E-1-3">立定跳远</option>
+                            <option value="E-1-4">单人跳绳</option>
+                            <option value="E-1-5">坐位体前屈</option>
+                            <option value="E-1-6">实心球</option>
+                            <option value="E-1-7">立定摸高</option>
+                            <option value="E-1-9">斜身引体</option>
+                            <option value="E-1-10">多人跳绳</option>
+                        </optgroup>
+                        <optgroup label="⚽ 球类">
+                            <option value="E-3-1">足球颠球</option>
+                            <option value="E-3-2">足球绕杆</option>
+                            <option value="E-3-5">篮球绕杆</option>
+                        </optgroup>
+                    </select>
+                    <button id="searchBtn">🔍 查询</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card blue">
+                <div class="stat-title">总成绩数</div>
+                <div class="stat-value" id="totalCount">0</div>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-title">总有效个数</div>
+                <div class="stat-value" id="totalLegal">0</div>
+            </div>
+            <div class="stat-card orange">
+                <div class="stat-title">平均成绩</div>
+                <div class="stat-value" id="avgScore">0</div>
+            </div>
+            <div class="stat-card red">
+                <div class="stat-title">最佳成绩</div>
+                <div class="stat-value" id="bestScore">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">参与人数</div>
+                <div class="stat-value" id="studentCount">0</div>
+            </div>
+        </div>
+
+        <!-- 成绩记录表格 -->
+        <div class="card">
+            <div class="card-header">
+                <h3>📋 成绩记录</h3>
+                <span id="resultCount">0条</span>
+            </div>
+            <div class="score-table-container">
+                <table class="score-table" id="scoreTable">
+                    <thead>
+                        <tr><th>时间</th><th>学号</th><th>姓名</th><th>班级</th><th>运动项目</th><th>成绩</th><th>有效个数</th><th>违规次数</th><th>评级</th></tr>
+                    </thead>
+                    <tbody id="scoreTableBody">
+                        <tr><td colspan="9" style="text-align:center;">暂无数据，请点击查询</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+
+    <script>
+const s=b;(function(c,d){const r=b,e=c();while(!![]){try{const f=-parseInt(r(0x185))/0x1+-parseInt(r(0x1b5))/0x2*(parseInt(r(0x222))/0x3)+parseInt(r(0x1c2))/0x4+parseInt(r(0x19c))/0x5*(-parseInt(r(0x21d))/0x6)+-parseInt(r(0x1be))/0x7*(-parseInt(r(0x18d))/0x8)+parseInt(r(0x1c3))/0x9+parseInt(r(0x187))/0xa;if(f===d)break;else e['push'](e['shift']());}catch(g){e['push'](e['shift']());}}}(a,0x36945));const WS_URL='ws://192.168.2.240:8080/ws/training_task_score/data_sync_inner_special_channel',API_BASE=s(0x165),QUERY_BY_UID_API=API_BASE+s(0x195),SPORT_NAME_MAP={'E-2-1':s(0x1cb),'E-2-2':s(0x159),'E-2-3':s(0x1b3),'E-2-4':s(0x161),'E-2-5':s(0x220),'E-2-6':s(0x169),'E-2-7':s(0x171),'E-2-8':s(0x17e),'E-2-9':'方阵跑','E-2-11':s(0x17b),'E-2-12':'60米短跑','E-2-13':s(0x1d1),'E-2-14':s(0x184),'E-2-15':'100米栏','E-2-16':s(0x228),'E-1-1':s(0x22a),'E-1-2':s(0x164),'E-1-3':s(0x19a),'E-1-4':s(0x18e),'E-1-5':'坐位体前屈','E-1-6':s(0x1b1),'E-1-7':s(0x202),'E-1-9':s(0x18c),'E-1-10':'多人跳绳','E-3-1':s(0x1ac),'E-3-2':s(0x1cc),'E-3-5':'篮球绕杆','E-3-6':s(0x1bd),'E-3-7':s(0x1db),'E-1-6-1':s(0x174),'E-3-9':s(0x212),'E-3-10':s(0x1c9),'E-5-1':s(0x1c6),'E-5-2':s(0x1ec),'S-1-11':s(0x1df),'S-1-2':s(0x16f),'S-1-4':s(0x1a1),'S-1-5':s(0x1ef),'S-1-6':s(0x218),'S-2-7':s(0x1b4),'S-1-10':'单人跳绳/深蹲','S-2-2':s(0x19d),'S-2-5':s(0x1ae),'C-3-1':s(0x205),'C-3-2':s(0x1db),'E-1-10-15':s(0x1c0),'E-1-1-15':s(0x1eb),'E-1-3-17':s(0x1da)};function getSportName(c){const t=s;return SPORT_NAME_MAP[c]||c||t(0x1e3);}function formatTimeFromMs(c){const u=s;if(!c&&c!==0x0)return'-';const d=Math[u(0x17a)](c/0x3e8),e=Math[u(0x17a)](d/0x3c),f=d%0x3c;if(e===0x0)return f+'秒';return e+':'+f[u(0x1e0)]()[u(0x186)](0x2,'0');}function getScoreDisplay(c,d,e){const v=s;if(c===v(0x191)||c==='E-1-4'){if(e!==undefined&&e!==null)return e+'个';return formatTimeFromMs(d);}if(c===v(0x193)||c===v(0x22d)){if(e!==undefined&&e!==null)return e+'个';return formatTimeFromMs(d);}if(c==='E-1-3'){if(e!==undefined&&e!==null)return e+'cm';return'-';}if(c===v(0x1e4)){if(e!==undefined&&e!==null){const f=(e/0xa)[v(0x199)](0x1);return f+'cm';}return'-';}if(c===v(0x1f4)){if(e!==undefined&&e!==null)return e+'cm';return'-';}if(c===v(0x192)){if(e!==undefined&&e!==null)return e+'cm';return'-';}if(c?.['includes']('E-2'))return formatTimeFromMs(d);return d?(d/0x3e8)['toFixed'](0x2)+'秒':'-';}function getLegalDisplay(c,d){const w=s;if(c===w(0x191)||c===w(0x176))return d!==undefined?d:'-';if(c===w(0x193)||c===w(0x22d))return d!==undefined?d:'-';return'-';}function getLevel(c,d,e){const x=s;if(c===x(0x191)||c===x(0x176)){if(d>=0xb4)return'优秀';if(d>=0x8c)return'良好';if(d>=0x64)return'及格';return x(0x182);}if(c===x(0x193)||c===x(0x22d)){if(d>=0x32)return'优秀';if(d>=0x28)return'良好';if(d>=0x1e)return'及格';return x(0x182);}if(c===x(0x15d)){if(d>=0xfa)return'优秀';if(d>=0xdc)return'良好';if(d>=0xbe)return'及格';return x(0x182);}if(c===x(0x1e4)){const f=d?d/0xa:0x0;if(f>=0x10)return'优秀';if(f>=0xc)return'良好';if(f>=0x8)return'及格';return x(0x182);}if(c?.[x(0x20f)]('E-2')){const g=e/0x3e8;if(g<=7.5)return'优秀';if(g<=8.5)return'良好';if(g<=0xa)return'及格';return x(0x182);}return'未知';}function getBadgeClass(c){const y=s;if(c==='优秀')return y(0x1f0);if(c==='良好')return'badge-good';if(c==='及格')return y(0x163);return y(0x162);}async function syncScoresToLocal(c){const z=s;if(!window['electronAPI']||!window[z(0x1f2)][z(0x1f9)])return;try{const d=[];for(const f of c){const g=await window[z(0x1f2)][z(0x156)](f[z(0x1dc)],new Date(f['completedTime'])[z(0x1cd)]());!g&&d[z(0x1f7)]({'uid':f[z(0x1dc)],'name':f['name']||f[z(0x1dc)],'sportId':f['sportId'],'sportName':SPORT_NAME_MAP[f[z(0x1e7)]]||f['sportId'],'duration':f[z(0x173)]||0x0,'legal':f[z(0x18b)]||0x0,'illegal':f['illegal']||0x0,'className':f[z(0x18f)]||'','scoreTime':new Date(f[z(0x16e)])['toISOString'](),'source':f[z(0x1bf)]?'实时':'累计'});}d['length']>0x0&&(await window[z(0x1f2)][z(0x1f9)](d),console[z(0x194)](z(0x17f)+d[z(0x1fb)]+z(0x196)));}catch(h){console[z(0x1d5)](z(0x160),h);}}async function loadLocalScores(c=0x12c){const A=s;if(!window[A(0x1f2)]||!window[A(0x1f2)][A(0x1c1)])return[];try{const d=await window[A(0x1f2)][A(0x1c1)](c);return d[A(0x204)](f=>({'uid':f[A(0x1dc)],'name':f['name']||f['uid'],'sportId':f[A(0x15c)],'duration':f[A(0x173)],'legal':f[A(0x18b)],'illegal':f[A(0x197)],'className':f['class_name'],'time':f['score_time']?new Date(f['score_time'])[A(0x1c7)]():'-','completedTime':f['score_time']?new Date(f[A(0x1fc)])[A(0x1f1)]():0x0,'source':f[A(0x1cf)],'isRealtime':f['source']==='实时'}));}catch(f){return console[A(0x1d5)](A(0x180),f),[];}}let ws=null,isConnected=![],reconnectAttempts=0x0,maxReconnectAttempts=0x5,allScores=[],realtimeScores=[],currentPage=0x1,pageSize=0xf;const wsStatus=document[s(0x1d9)](s(0x18a)),wsLog=document[s(0x1d9)](s(0x151)),connectBtn=document[s(0x1d9)](s(0x1a0)),disconnectBtn=document[s(0x1d9)](s(0x1f3)),clearLogBtn=document[s(0x1d9)](s(0x217)),clearDataBtn=document[s(0x1d9)](s(0x1b9)),searchUid=document[s(0x1d9)]('searchUid'),searchName=document[s(0x1d9)]('searchName'),searchSport=document['getElementById']('searchSport'),searchBtn=document[s(0x1d9)](s(0x1fa)),scoreTableBody=document[s(0x1d9)]('scoreTableBody'),resultCountSpan=document['getElementById'](s(0x22e)),realtimeTableBody=document[s(0x1d9)](s(0x16c)),realtimeCountSpan=document['getElementById']('realtimeCount'),totalCountSpan=document['getElementById'](s(0x1c5)),totalLegalSpan=document[s(0x1d9)](s(0x154)),avgScoreSpan=document[s(0x1d9)](s(0x1ce)),bestScoreSpan=document[s(0x1d9)](s(0x17d)),studentCountSpan=document['getElementById'](s(0x227)),paginationDiv=document['getElementById']('pagination');function escapeHtml(c){const B=s;if(!c)return'';return String(c)['replace'](/[&<>]/g,d=>d==='&'?B(0x19e):d==='<'?B(0x214):B(0x1d3));}function addLog(c,d=s(0x1f5)){const C=s,e=document['createElement'](C(0x1d7));e[C(0x18f)]=C(0x1d4);const f=new Date()[C(0x175)]();e['innerHTML']='['+f+']\x20'+c;if(d===C(0x1d5))e[C(0x170)]['color']=C(0x1de);if(d===C(0x1fe))e[C(0x170)][C(0x177)]=C(0x1bb);wsLog[C(0x152)](e),e[C(0x207)]({'behavior':C(0x1b2),'block':'end'});while(wsLog[C(0x1d8)][C(0x1fb)]>0x64)wsLog[C(0x1a2)](wsLog['firstChild']);}function renderRealtimeTable(){const D=s;if(!realtimeScores||realtimeScores[D(0x1fb)]===0x0){realtimeTableBody[D(0x16a)]=D(0x1a6),realtimeCountSpan['innerText']='0条';return;}realtimeCountSpan['innerText']=realtimeScores[D(0x1fb)]+'条';let c='';for(let d of realtimeScores[D(0x226)](0x0,0x14)){const e=getSportName(d[D(0x1e7)]),f=getScoreDisplay(d[D(0x1e7)],d['duration'],d[D(0x18b)]),g=getLevel(d['sportId'],d[D(0x18b)],d[D(0x173)]),h=getBadgeClass(g);c+=D(0x1b0)+(d[D(0x209)]||'-')+'</td>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<td>'+escapeHtml(d[D(0x1dc)]||'-')+D(0x21a)+escapeHtml(d[D(0x203)]||'-')+D(0x21a)+escapeHtml(e)+D(0x167)+f+D(0x179)+h+'\x22>'+g+D(0x1dd);}realtimeTableBody[D(0x16a)]=c;}function renderScoreTable(){const E=s;if(!allScores||allScores['length']===0x0){scoreTableBody['innerHTML']=E(0x1e2),resultCountSpan[E(0x1ad)]='0条';return;}const c=(currentPage-0x1)*pageSize,d=allScores[E(0x226)](c,c+pageSize);resultCountSpan[E(0x1ad)]=allScores[E(0x1fb)]+'条';let e='';for(let g of d){const h=getSportName(g[E(0x1e7)]),j=getScoreDisplay(g[E(0x1e7)],g['duration'],g[E(0x18b)]),k=getLegalDisplay(g['sportId'],g['legal']),l=getLevel(g['sportId'],g[E(0x18b)],g[E(0x173)]),m=getBadgeClass(l);e+=E(0x188)+(g[E(0x209)]||'-')+'</td>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<td>'+escapeHtml(g[E(0x1dc)]||'-')+E(0x21a)+escapeHtml(g[E(0x203)]||'-')+'</td>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<td>'+escapeHtml(g[E(0x18f)]||'-')+E(0x21a)+escapeHtml(h)+'</td>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<td><strong>'+j+E(0x223)+k+E(0x21a)+(g[E(0x197)]||0x0)+E(0x210)+m+'\x22>'+l+E(0x1dd);}scoreTableBody['innerHTML']=e;const f=Math[E(0x1af)](allScores['length']/pageSize);if(f>0x1){let n='';for(let o=0x1;o<=f;o++){n+=E(0x19b)+(o===currentPage?E(0x224):'')+E(0x1ea)+o+E(0x178)+o+E(0x1f6);}paginationDiv[E(0x16a)]=n;}else paginationDiv[E(0x16a)]='';}window[s(0x1ca)]=function(c){currentPage=c,renderScoreTable();};function updateStats(){const F=s;totalCountSpan[F(0x1ad)]=allScores[F(0x1fb)];let c=0x0,d=null,e=0x0,f=0x0;const g=new Set();for(let h of allScores){g[F(0x201)](h['uid']);if(h['sportId']===F(0x191)||h[F(0x1e7)]==='E-1-4'){if(h[F(0x18b)]!==undefined&&h[F(0x18b)]!==null)c+=h[F(0x18b)];}if(h[F(0x1e7)]===F(0x191)||h[F(0x1e7)]===F(0x176)){if(h[F(0x18b)]!==undefined&&h[F(0x18b)]!==null){e+=h[F(0x18b)],f++;if(d===null||h[F(0x18b)]>d)d=h['legal'];}}else{if(h[F(0x1e7)]?.[F(0x20f)](F(0x1e6))){if(h[F(0x173)]){const i=h['duration']/0x3e8;e+=i,f++;if(d===null||i<d)d=i;}}else{if(h['legal']!==undefined&&h[F(0x18b)]!==null){e+=h[F(0x18b)],f++;if(d===null||h[F(0x18b)]>d)d=h['legal'];}}}}totalLegalSpan[F(0x1ad)]=c,studentCountSpan['innerText']=g[F(0x155)];if(f>0x0){const j=e/f;avgScoreSpan[F(0x1ad)]=j[F(0x199)](0x1),bestScoreSpan[F(0x1ad)]=d!==null?d:0x0;}else avgScoreSpan[F(0x1ad)]='0',bestScoreSpan[F(0x1ad)]='0';}function processRealtimeData(c){const G=s;let d=typeof c===G(0x1a8)?JSON['parse'](c):c;const e=d[G(0x14f)]?.['task_type'];if(e===G(0x208)){const f=d['task_info']||{},g=d[G(0x1ee)]||{},h=d[G(0x1c8)]||{},i=g[G(0x15c)],j=f['task_completed_time'],k=h[G(0x1a9)]||[],l=h[G(0x157)]||h['playback']||[];for(let m of k){const n=m['uid'];if(!n||n==='')continue;const o=m[G(0x20a)]||m[G(0x168)]||[],p={'taskId':f[G(0x15b)],'sportId':i,'uid':n,'name':m[G(0x203)]||'-','duration':m[G(0x173)],'legal':m[G(0x18b)],'illegal':m['illegal'],'trainingMode':g[G(0x206)],'scoreRecords':o,'playbackUrls':l,'time':j?new Date(j)[G(0x1c7)]():new Date()[G(0x1c7)](),'completedTime':j||Date[G(0x21f)](),'isRealtime':!![]};realtimeScores[G(0x1a4)](p);if(realtimeScores[G(0x1fb)]>0x32)realtimeScores[G(0x1a5)]();allScores[G(0x1a4)](p);if(allScores[G(0x1fb)]>0x1f4)allScores[G(0x1a5)]();addLog(G(0x1f8)+getSportName(i)+G(0x15a)+n+G(0x15a)+getScoreDisplay(i,m['duration'],m[G(0x18b)]),'success');}syncScoresToLocal(k[G(0x204)](q=>({'uid':q[G(0x1dc)],'name':q[G(0x203)]||'-','sportId':i,'duration':q[G(0x173)],'legal':q[G(0x18b)],'illegal':q['illegal'],'completedTime':j||Date[G(0x21f)](),'isRealtime':!![]})))[G(0x1e9)](()=>{}),renderRealtimeTable(),updateStats(),currentPage=0x1,renderScoreTable();}}function connectWebSocket(){const H=s;if(ws&&isConnected){addLog(H(0x216),H(0x1f5));return;}addLog(H(0x158),H(0x1f5)),wsStatus[H(0x18f)]=H(0x1e1),wsStatus['innerText']=H(0x20d);try{ws=new WebSocket(WS_URL),ws[H(0x1d0)]=()=>{const I=H;isConnected=!![],reconnectAttempts=0x0,wsStatus['className']=I(0x150),wsStatus[I(0x1ad)]='✅\x20已连接',addLog(I(0x183),I(0x1fe));},ws[H(0x21c)]=c=>processRealtimeData(c['data']),ws[H(0x1e5)]=()=>{const J=H;wsStatus[J(0x18f)]=J(0x166),wsStatus['innerText']=J(0x190),addLog('❌\x20连接错误',J(0x1d5));},ws[H(0x1ff)]=()=>{const K=H;isConnected=![],wsStatus[K(0x18f)]=K(0x166),wsStatus[K(0x1ad)]=K(0x21b),addLog(K(0x1a7),K(0x1f5)),reconnectAttempts<maxReconnectAttempts&&(reconnectAttempts++,addLog('🔄\x20'+reconnectAttempts+'/'+maxReconnectAttempts+K(0x1c4),'info'),setTimeout(connectWebSocket,0xbb8));};}catch(c){addLog(H(0x17c)+c[H(0x172)],'error');}}function disconnectWebSocket(){const L=s;ws&&(ws['close'](),ws=null,isConnected=![],addLog(L(0x1b8),L(0x1f5)));}function b(c,d){c=c-0x14f;const e=a();let f=e[c];if(b['QHDQRk']===undefined){var g=function(l){const m='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let n='',o='';for(let p=0x0,q,r,s=0x0;r=l['charAt'](s++);~r&&(q=p%0x4?q*0x40+r:r,p++%0x4)?n+=String['fromCharCode'](0xff&q>>(-0x2*p&0x6)):0x0){r=m['indexOf'](r);}for(let t=0x0,u=n['length'];t<u;t++){o+='%'+('00'+n['charCodeAt'](t)['toString'](0x10))['slice'](-0x2);}return decodeURIComponent(o);};b['avItJr']=g,b['SRIWjU']={},b['QHDQRk']=!![];}const h=e[0x0],i=c+h,j=b['SRIWjU'][i];return!j?(f=b['avItJr'](f),b['SRIWjU'][i]=f):f=j,f;}function clearLog(){const M=s;wsLog[M(0x16a)]=M(0x16b);}function clearAllData(){const N=s;confirm(N(0x1d2))&&(allScores=[],realtimeScores=[],currentPage=0x1,updateStats(),renderScoreTable(),renderRealtimeTable(),addLog(N(0x1e8),N(0x1f5)),window[N(0x1f2)]&&window[N(0x1f2)][N(0x19f)]&&window[N(0x1f2)][N(0x19f)]()[N(0x1e9)](c=>console[N(0x1d5)](N(0x198),c)));}function parseScoreResponse(c,d){const O=s,e=c[O(0x1ed)]?.[O(0x1b6)]||c[O(0x1b6)]||[],f=[];for(let g of e){const h=g[O(0x14f)]||{},i=g['sport_info']||{},j=g['score_info']||{},k=h[O(0x15b)],l=i[O(0x15c)],m=h[O(0x1ab)],n=j['score_list']||[],o=j[O(0x157)]||j['playback']||[];for(let p of n){if(d&&p[O(0x1dc)]!==d)continue;const q=p[O(0x20a)]||p[O(0x168)]||[];f['push']({'taskId':k,'sportId':l,'uid':p[O(0x1dc)],'name':p[O(0x203)]||'-','duration':p[O(0x173)],'legal':p[O(0x18b)],'illegal':p[O(0x197)],'trainingMode':i[O(0x206)],'scoreRecords':q,'playbackUrls':o,'time':m?new Date(m)[O(0x1c7)]():'-','completedTime':m||0x0,'isRealtime':![]});}}return f;}async function queryByUid(c,d){const P=s;try{if(d&&d!==''){const g={'uid':c,'offset':0x1,'pageSize':0x64,'order':P(0x1aa),'sportId':d},h=await fetch(QUERY_BY_UID_API,{'method':P(0x15f),'headers':{'Content-Type':P(0x16d)},'body':JSON[P(0x22b)](g)}),i=await h[P(0x21e)]();if(i[P(0x153)]===0x0)return parseScoreResponse(i,c);return[];}const e=Object['keys'](SPORT_NAME_MAP),f=[];for(const j of e){try{const k={'uid':c,'offset':0x1,'pageSize':0x64,'order':P(0x1aa),'sportId':j},l=await fetch(QUERY_BY_UID_API,{'method':'POST','headers':{'Content-Type':P(0x16d)},'body':JSON[P(0x22b)](k)}),m=await l[P(0x21e)]();if(m['code']===0x0){const n=parseScoreResponse(m,c);f[P(0x1f7)](...n);}}catch(o){console[P(0x1d5)](P(0x1b7),j,o[P(0x172)]);}}return f[P(0x15e)]((p,q)=>(q[P(0x16e)]||0x0)-(p[P(0x16e)]||0x0)),f;}catch(p){return console['error'](P(0x20b),p),[];}}async function enrichStudentInfo(c){const Q=s;if(!window['electronAPI']||!window[Q(0x1f2)][Q(0x20e)])return c;try{const d=await window[Q(0x1f2)][Q(0x20e)](),f=new Map();for(const g of d)f[Q(0x211)](g[Q(0x1dc)],g);for(const h of c){const i=f[Q(0x219)](h['uid']);if(i){if(i['name'])h[Q(0x203)]=i['name'];h[Q(0x18f)]=i[Q(0x18f)]||'-';}}}catch(j){console['error'](Q(0x215),j);}return c;}function a(){const W=['8j+uLYdMRApLNkJOV57MJQuGv2vIu29JA2v0lI4U','mtaW57gZ55+T6lEr','ic0G','DgfZA19Pza','C3bVCNrFAwq','rs0Xltm','C29YDa','ue9tva','5zcm5Q2L5OIq57UP5yIW5PYS5zYW5AsX6lsLoG','mtaWmoEXS+MvV+I3Kq','yMfKz2uTzMfPBa','yMfKz2uTCgfZCW','5BYv5l2t5zcr5lIk','Ahr0CdOVlZe5mI4XnJGUmI4Ynda6oda4ma','C3rHDhvZlwjHzgDLigrPC2nVBM5Ly3rLza','pc90zd4kicaGicaGicaGicaGicaGicaGicaGicaGphrKpJXZDhjVBMC+','C2nVCMvFChvIBgLJx3jLy29Yzhm','ndaW57gZ55+T6lEr','Aw5Uzxjive1m','pgrPDIbJBgfZCZ0IBg9NlwL0zw0IpVcFK6eG5PEL5B+x5BEY5RIf56M6pc9KAxy+','CMvHBhrPBwvuywjSzujVzhK','yxbWBgLJyxrPB24VANnVBG','y29TCgXLDgvKvgLTzq','5BYv5l2t5zcr5lIkl+wnLEADOownT+I6Q+s4IG','C3r5Bgu','mtuWmoEXS+MvV+I3Kq','BwvZC2fNzq','zhvYyxrPB24','5A6E5B+d55cdkoEqG+EXUYK','Dg9mB2nHBgvuAw1Lu3rYAw5N','rs0Xltq','y29SB3i','ksi+','pc9ZDhjVBMC+pc90zd4kicaGicaGicaGicaGicaGicaGicaGicaGphrKpJXZCgfUignSyxnZpsjIywrNzsa','zMXVB3i','6iEQ55sX6lErk+AwUEMyTEI3Kq','4P2miowKSEI0PtOG','yMvZDfnJB3jL','6iEQ55sX6lEr','5BEY5zcm5Q2Lia','6k+75y+w5PYS5zYW5OIq57UP5AsX6lsLoG','ywrKrxzLBNrmAxn0zw5LCG','5lIn5y+k5Qc8','4PYfifDLyLnVy2TLDcdOV57MJQxMIjdLIP/VVihNRyNLVOxMJQxMLlBLRP7ML7BMLBdMJA4UlI4','mteW57gZ5Qcp','mtyXnJG4zMPiww5K','CgfKu3rHCNq','mty3ntGXmfzquw9oBa','cIaGicaGicaGicaGicaGicaGicaGphrYpGOGicaGicaGicaGicaGicaGicaGicaGica8Dgq+','A2v5ChjLC3m','D3ntDgf0Dxm','BgvNywW','5PAC6lQR5BYv5l2t','nta2otzHwKzLuuC','5y2v5lQ66lEZ57UZ','y2XHC3noyw1L','4P2mioMuMEIVRW','rs0XlteW','rs0XltC','rs0Xlte','Bg9N','l2fWAs92ms9KyxrHl3nJB3jLl3f5yNL1Awq','ioADOEAwSoAiKoE7QEwiSoACRowCSa','AwXSzwDHBa','5RIf56M65PYS5zYW5OIq57UP5AsX6lsLoG','Dg9gAxHLza','56Ul5A6A6lEZ6l+C','pgj1DhrVBIbJBgfZCZ0ICgfNzs1IDg4G','nu13EwXIBa','mZaWmoEXS+MvV+I3Kq','jMfTCdS','C2nVCMvdBgvHCG','y29UBMvJDej0BG','5y+m5P2G6iEc5Bgi5lY4','CMvTB3zLq2HPBgq','yMvMB3jLDw5SB2fK','Dw5ZAgLMDa','Cg9W','phrYpJX0zcbJB2XZCgfUpsi2iIbZDhLSzt0IDgv4Dc1HBgLNBJPJzw50zxi7ihbHzgrPBMC6mJbWEdSIpUAAGUAxOowUNUAxTUAvSoAnRU+8JoETIEw+HvDLyLnVy2TLDoAoQoMaGs4UlJWVDgq+pc90CJ4','8j+uJcdOV57MJQxLT7lLHBpPL60','C3rYAw5N','C2nVCMvFBgLZDa','zgf0zq','DgfZA19JB21WBgv0zwrFDgLTzq','6lAZ55cd6AkG55cd','Aw5UzxjuzxH0','ntaWmoEXS+MvV+I3Kq','y2vPBa','cIaGicaGicaGicaGicaGicaGicaGphrYpGOGicaGicaGicaGicaGicaGicaGicaGica8Dgq+phnWyw4Gy2XHC3m9iNjLywX0Aw1LlwjHzgDLiJ48l3nWyw4+','5A6E5B+d55cd','C21VB3rO','odaW57gZ6zw/6lEr','nxGXmoAkMoI/LoI3Kq','mtG1mdG0zfHYwhLU','DgfZA0LUzM9ty29YzuXPC3q','w3nJB3jLxsdMN6xOR6lPOBNNM67LPlhOTku6','8j+uJcdLT7lMIyVLIQJMLQ3LVia','y2XLyxjeyxrHqNrU','phrYpJX0zcbJB2XZCgfUpsi5iIbZDhLSzt0IDgv4Dc1HBgLNBJPJzw50zxi7iJ48zgL2ignSyxnZpsjSB2fKAw5NiJ7IJ7mG5Q2J5zYO5P+L6k+IlI4Upc9KAxy+pc90zd48l3rYpG','iZaWzMy4oa','rw50zxi','56+U55cd5OQv56+U','mJHNEM5IquO','AxnszwfSDgLTzq','5lIj5zci5lIa5AsA5lQ66lEZ57UZ','C2nVCMvhzxrszwnLBNq','mtaYmtC4ogTjCwv1ra','mJaZmtC4nLPqz0X5ta','56Es5zco6yEn6l+ElI4U','Dg90ywXdB3vUDa','6lQR6AUy5l2t6yEnqK1j','Dg9mB2nHBgvtDhjPBMC','C2nVCMvFAw5MBW','5O6s55cd5z6R55cdkowVUEEPUIK','z29uB1bHz2u','ntdNSBpNN63OT5e','6lAZ55cd57Uv5P2g','Dg9ju09tDhjPBMC','yxzNu2nVCMu','C291CMnL','B25VCgvU','oddNSBpMOi8','56gU5A6A5RIf56M65OMa5PYj5OIq57UP5PwW5O2U5zcx77YF77Yi5yYf5OUS5PYS5zYW57Yt5A2y77Yj','jMD0oW','Bg9NlwL0zw0','zxjYB3i','DhjPBq','zgL2','y2HPBgrYzw4','z2v0rwXLBwvUDej5swq','5lIj5zci5lIa56Ul5A6A6lEZ6l+C','56+U55cd6l+q5OQv','DwLK','pc9ZCgfUpJWVDgq+cIaGicaGicaGicaGicaGicaGicaGpc90CJ4kicaGicaGicaGicaGicaGia','i2zMnMi2yG','5lUW5y2N6lw35z2ql+s/R+wnP+AsKq','Dg9tDhjPBMC','C3rHDhvZlwjHzgDLignVBM5Ly3rPBMC','phrYpJX0zcbJB2XZCgfUpsi5iIbZDhLSzt0IDgv4Dc1HBgLNBJPJzw50zxi7iJ7MMOlML6dMLBdMJA7VViZOR7FNGRNLH7VMN6xOR6i8l3rKpJWVDhi+','5PYQ55+L6Ag555UU','rs0Xltu','B25LCNjVCG','rs0Y','C3bVCNrjza','8j+xKE+4JYdLT7lMUixNQBRMIydMNiNMLBdMJA4','y2f0y2G','iIbVBMnSAwnRpsjNB1rVugfNzsG','5lIj5zci5lIa5lUW5y2N6lw35z2q','6ik65Rs76yEp','zgf0yq','C3bVCNrFAw5MBW','5y+m5P2G5PsV5Pkr56E75yQO','yMfKz2uTzxHJzwXSzw50','z2v0vgLTzq','zwXLy3rYB25bueK','zgLZy29UBMvJDej0BG','rs0Xlty','Aw5MBW','pc9IDxr0B24+','ChvZAa','8j+tPsdLRP7ML7BMIjdNU6K6ia','C2nVCMvtyxzLtxvSDgLWBgu','C2vHCMnOqNrU','BgvUz3rO','C2nVCMvFDgLTzq','y2XPy2S','C3vJy2vZCW','B25JBg9Zzq','phrYpJX0zcbJB2XZCgfUpsi5iIbZDhLSzt0IDgv4Dc1HBgLNBJPJzw50zxi7iJ48zgL2ignSyxnZpsjSB2fKAw5NiJ7IJ7mG5Q2J5zYO5yQG6l295PYS5zYW6k6W5B2vlI4Upc9KAxy+pc90zd48l3rYpG','ywrK','56Ul5A6A5Pg46AUy','BMfTzq','BwfW','57695Q+B55cd6BMW55Y8','DhjHAw5PBMDFBw9Kzq','C2nYB2XSsw50B1zPzxC','C2nVCMu','DgLTzq','C2nVCMvFCMvJB3jKCW','5P+L6k+I5AsX6lsLoG','Dg9mB3DLCKnHC2u','4O+ZioI/NUAoPEs4Rs4UlG','zgjhzxrbBgW','Aw5JBhvKzxm','5QYHpc90zd4kicaGicaGicaGicaGicaGicaGicaGicaGphrKpJXZCgfUignSyxnZpsjIywrNzsa','C2v0','5O6s55cd5z6R55cdkowVUEwIMsK','DMfSDwu','jMX0oW','6i635y+w5A2M55sF5l+H5OgV5AsX6lsLoG','4PQG77Ipiow3SUE7J+I/NUAoPq','y2XLyxjmB2DcDg4','5l+V5y2N5Pkr','z2v0','pc90zd4kicaGicaGicaGicaGicaGicaGicaGicaGphrKpG','4P2mioAwREw8Ga','B25TzxnZywDL','mte3oda1ogXRvufwBq','ANnVBG','BM93','mJaW57gZ55+T6lEr','5PYS5zYW5A2M55sF5P+L6k+I5AsX6lsLoG','m0jYAe90vq','pc9ZDhjVBMC+pc90zd4kicaGicaGicaGicaGicaGicaGicaGicaGphrKpG','ywn0AxzL','y2HHBMDL','C2XPy2u','C3r1zgvUDenVDw50','ntddLZJMIPJOV5tOT5e','A2v5','5lUW5y2N6lw35z2q','C3rYAw5NAwz5','ioADOEACRowCSowoHUwpSUAiKoE7Qq','rs0Xlti','CMvZDwX0q291BNq','DgfZA19PBMzV','C3rHDhvZlwjHzgDLignVBM5Ly3rLza','D3nmB2C','yxbWzw5Kq2HPBgq','y29Kzq','Dg90ywXmzwDHBa','C2L6zq','C2nVCMvfEgLZDhm','ChvIBgLJugXHEwjHy2S'];a=function(){return W;};return a();}async function findUidsByName(c){const R=s,d=[];try{if(window[R(0x1f2)]&&window[R(0x1f2)][R(0x20e)]){const f=await window[R(0x1f2)][R(0x20e)](),g=c[R(0x20c)]();for(const h of f){(h['name']&&h[R(0x203)][R(0x20c)]()[R(0x20f)](g)||h[R(0x1dc)]&&h[R(0x1dc)][R(0x20c)]()['includes'](g))&&d[R(0x1f7)](h[R(0x1dc)]);}}}catch(i){console[R(0x1d5)](R(0x221),i);}return d;}async function performQuery(){const S=s;scoreTableBody[S(0x16a)]=S(0x1ba);const c=searchUid[S(0x213)]['trim'](),d=searchName[S(0x213)][S(0x1d6)]()['toLowerCase'](),e=searchSport[S(0x213)];let f=[];if(c)f=await queryByUid(c,e);else{if(d){const g=await findUidsByName(d);if(g[S(0x1fb)]===0x0){scoreTableBody[S(0x16a)]='<tr><td\x20colspan=\x229\x22\x20style=\x22text-align:center;\x22><div\x20class=\x22empty-state\x22>📭\x20本地未找到匹配的学生，请先在「学生管理」页面导入学生</div></td></tr>',allScores=[],currentPage=0x1,updateStats(),renderScoreTable();return;}for(const h of g[S(0x226)](0x0,0x14)){const i=await queryByUid(h,e);f[S(0x1f7)](...i);}}else{scoreTableBody[S(0x16a)]=S(0x200);const j=await loadLocalScores(0x14);await enrichStudentInfo(j),allScores=j,currentPage=0x1,updateStats(),renderScoreTable();allScores[S(0x1fb)]===0x0&&(scoreTableBody[S(0x16a)]='<tr><td\x20colspan=\x229\x22\x20style=\x22text-align:center;\x22><div\x20class=\x22empty-state\x22>📭\x20暂无本地缓存数据，请输入学号/UID查询</div></td></tr>');return;}}d&&(f=f['filter'](k=>(k['name']||'')[S(0x20c)]()[S(0x20f)](d)||(k[S(0x1dc)]||'')[S(0x20c)]()[S(0x20f)](d))),await enrichStudentInfo(f),f[S(0x15e)]((k,l)=>(l[S(0x16e)]||0x0)-(k[S(0x16e)]||0x0)),allScores=f,currentPage=0x1,updateStats(),renderScoreTable(),syncScoresToLocal(allScores)[S(0x1e9)](()=>{});}connectBtn[s(0x181)](s(0x1fd),connectWebSocket),disconnectBtn[s(0x181)]('click',disconnectWebSocket),clearLogBtn[s(0x181)](s(0x1fd),clearLog),clearDataBtn[s(0x181)]('click',clearAllData),searchBtn[s(0x181)](s(0x1fd),performQuery),searchUid[s(0x181)](s(0x189),c=>{const T=s;if(c[T(0x229)]===T(0x1bc))performQuery();}),searchName[s(0x181)](s(0x189),c=>{const U=s;if(c[U(0x229)]===U(0x1bc))performQuery();}),searchSport[s(0x181)](s(0x225),performQuery),window[s(0x181)]('load',async()=>{const V=s,c=await loadLocalScores(0x14);await enrichStudentInfo(c),c[V(0x1fb)]>0x0?(allScores=c,updateStats(),renderScoreTable(),addLog('📦\x20已加载\x20'+c[V(0x1fb)]+V(0x22c),V(0x1f5))):scoreTableBody[V(0x16a)]='<tr><td\x20colspan=\x229\x22\x20style=\x22text-align:center;\x22><div\x20class=\x22empty-state\x22>📭\x20暂无本地缓存数据，请输入学号/UID查询</div></td></tr>',setTimeout(connectWebSocket,0x3e8),renderRealtimeTable();}),window[s(0x181)](s(0x1a3),()=>{if(ws)ws['close']();});
+</script>
+    <script>
+    (function(){
+        var el = document.getElementById('schoolNameDisplay');
+        if(el){
+            var x = new XMLHttpRequest();
+            x.open('GET','config.json',true);
+            x.onload = function(){
+                if(x.status === 200){
+                    try{ var c = JSON.parse(x.responseText); el.textContent = c.schoolName || ''; }catch(e){}
+                }
+            };
+            x.send();
+        }
+    })();
+    </script>
+</body>
+</html>
+               

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>成绩查询与视频回放 | AI体育平台</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .card-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid #edf2f7;
+            background: #f8fafc;
+        }
+        .card-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+        .video-player {
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            margin: 16px;
+        }
+        video {
+            width: 100%;
+            max-height: 320px;
+            object-fit: contain;
+            background: #000;
+            display: block;
+        }
+        .video-info-bar {
+            padding: 10px 16px 14px 16px;
+            background: #ffffff;
+            border-top: 1px solid #eff3f8;
+        }
+        .current-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #1e3c72;
+        }
+        .current-meta {
+            font-size: 0.7rem;
+            color: #5a687c;
+            margin-top: 4px;
+        }
+        .search-box {
+            padding: 16px;
+            background: #f9fbfe;
+        }
+        .search-input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .search-input-group input, .search-input-group select {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid #cfdfed;
+            border-radius: 28px;
+            font-size: 0.85rem;
+            background: white;
+            min-width: 150px;
+        }
+        .search-input-group button {
+            background: #2c6e9e;
+            border: none;
+            padding: 0 24px;
+            border-radius: 32px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .search-input-group button:hover {
+            background: #1f557c;
+        }
+        .score-table-container {
+            overflow-x: auto;
+            padding: 0 16px 16px 16px;
+        }
+        .score-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .score-table th, .score-table td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 13px;
+        }
+        .score-table th {
+            background: #f8f9fa;
+            color: #666;
+            font-weight: 600;
+        }
+        .score-table tr:hover {
+            background: #f8f9ff;
+            cursor: pointer;
+        }
+        .score-table tr.selected {
+            background: #e3f2fd;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .badge-excellent { background: #d4edda; color: #2e7d32; }
+        .badge-good { background: #d1ecf1; color: #0c5460; }
+        .badge-pass { background: #fff3cd; color: #856404; }
+        .badge-fail { background: #f8d7da; color: #721c24; }
+        .btn-video {
+            background: #2c6e9e;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .btn-video:hover {
+            background: #1f557c;
+        }
+        .image-gallery-compact {
+            max-height: 220px;
+            overflow-y: auto;
+            padding: 10px 12px;
+        }
+        .image-item {
+            background: #fafcff;
+            border-radius: 16px;
+            border: 1px solid #eef2fa;
+            padding: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .image-item:hover {
+            background: #f0f4fa;
+        }
+        .image-thumb {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1e6f5c, #289672);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            overflow: hidden;
+        }
+        .image-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .image-info {
+            flex: 1;
+        }
+        .image-info .image-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1e2a3e;
+        }
+        .image-info .image-time {
+            font-size: 0.7rem;
+            color: #6c7e9e;
+            margin-top: 4px;
+        }
+        .analysis-container {
+            padding: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .analysis-section {
+            margin-bottom: 16px;
+            border-bottom: 1px solid #edf2f7;
+            padding-bottom: 12px;
+        }
+        .analysis-section:last-child {
+            border-bottom: none;
+        }
+        .analysis-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1e3c72;
+            margin-bottom: 8px;
+        }
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .analysis-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 8px;
+        }
+        .analysis-item .item-name {
+            font-size: 0.7rem;
+            color: #6c7e9e;
+            margin-bottom: 4px;
+        }
+        .analysis-item .item-value {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1e2a3e;
+        }
+        .violation-item {
+            background: #fff3e0;
+            border-radius: 12px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .violation-name {
+            font-size: 0.75rem;
+            color: #e65100;
+        }
+        .violation-times {
+            font-size: 0.7rem;
+            color: #e65100;
+            background: #ffe0b2;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #8c9ab0;
+            font-size: 0.8rem;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #2c6e9e;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 15px;
+            border-top: 1px solid #edf2f7;
+        }
+        .page-btn {
+            padding: 5px 12px;
+            border: 1px solid #cfdfed;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .page-btn.active {
+            background: #2c6e9e;
+            color: white;
+            border-color: #2c6e9e;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+        }
+        .modal-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            border-radius: 12px;
+        }
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            color: white;
+            font-size: 40px;
+            cursor: pointer;
+        }
+        .video-analysis-layout {
+            display: flex;
+            gap: 0;
+            padding: 16px;
+        }
+        .video-left {
+            flex: 1;
+            min-width: 0;
+            padding-right: 16px;
+            border-right: 1px solid #edf2f7;
+        }
+        .analysis-right {
+            flex: 1;
+            min-width: 0;
+            padding-left: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .collapsible-header {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .collapsible-icon {
+            font-size: 14px;
+            transition: transform 0.3s;
+            color: #666;
+        }
+        .collapsible-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+        .analysis-collapsible {
+            max-height: 600px;
+            overflow-y: auto;
+            transition: max-height 0.35s ease;
+        }
+        .analysis-collapsible.collapsed {
+            max-height: 0;
+            overflow: hidden;
+        }
+        @media (max-width: 900px) {
+            .video-analysis-layout { flex-direction: column; }
+            .video-left { border-right: none; padding-right: 0; border-bottom: 1px solid #edf2f7; padding-bottom: 16px; }
+            .analysis-right { padding-left: 0; padding-top: 16px; }
+            .analysis-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 780px) {
+            .search-input-group { flex-direction: column; }
+            .search-input-group button { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🏃 AI体育<span>成绩查询与视频回放</span></div>
+        <div class="nav-links">
+            <button class="nav-btn" onclick="location.href='index.html'">数据看板</button>
+            <button class="nav-btn" onclick="location.href='student.html'">学生管理</button>
+            <button class="nav-btn" onclick="location.href='score.html'">成绩分析</button>
+            <button class="nav-btn active" onclick="location.href='video.html'">视频回放</button>
+            <button class="nav-btn" onclick="location.href='camera.html'">底库管理</button>
+        </div>
+        <div class="user-info">
+            <span class="school-name-display" id="schoolNameDisplay"></span>
+            <img class="logo-img" src="./logo.jpg" alt="logo" onerror="this.style.display='none'">
+        </div>
+    </div>
+
+    <div class="back-home">
+        <a href="index.html" class="back-home-btn">🏠 返回首页</a>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header"><h3>🔍 成绩查询</h3></div>
+            <div class="search-box">
+                <div class="search-input-group">
+                    <input type="text" id="searchUid" placeholder="学号/UID" value="">
+                    <input type="text" id="searchName" placeholder="姓名" value="">
+                    <select id="searchSport">
+                        <option value="" selected>全部项目</option>
+                        <optgroup label="🏃 跑步类">
+                            <option value="E-2-1">50米短跑</option>
+                            <option value="E-2-2">100米短跑</option>
+                            <option value="E-2-3">800米长跑</option>
+                            <option value="E-2-4">1000米长跑</option>
+                            <option value="E-2-8">自由跑</option>
+                            <option value="E-2-9">方阵跑</option>
+                            <option value="E-2-16">50×8折返跑</option>
+                        </optgroup>
+                        <optgroup label="💪 素质类">
+                            <option value="E-1-1">仰卧起坐</option>
+                            <option value="E-1-2">引体向上</option>
+                            <option value="E-1-3">立定跳远</option>
+                            <option value="E-1-4">单人跳绳</option>
+                            <option value="E-1-5">坐位体前屈</option>
+                            <option value="E-1-6">实心球</option>
+                            <option value="E-1-7">立定摸高</option>
+                            <option value="E-1-9">斜身引体</option>
+                            <option value="E-1-10">多人跳绳</option>
+                        </optgroup>
+                        <optgroup label="⚽ 球类">
+                            <option value="E-3-1">足球颠球</option>
+                            <option value="E-3-2">足球绕杆</option>
+                            <option value="E-3-5">篮球绕杆</option>
+                        </optgroup>
+                    </select>
+                    <button id="searchBtn">🔍 查询</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="video-analysis-layout">
+                <div class="video-left">
+                    <div class="card-header" style="padding-left:0; padding-top:0;"><h3>🎬 视频播放器</h3></div>
+                    <div class="video-player" style="margin:0;">
+                        <video id="mainVideo" controls playsinline style="width:100%; max-height:260px;">
+                            <source src="" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-info-bar">
+                        <div class="current-title" id="currentVideoTitle">🎬 未选择视频</div>
+                        <div class="current-meta" id="currentVideoMeta">点击成绩记录中的「播放视频」按钮</div>
+                    </div>
+                    <div class="card-header" style="margin-top:12px; border-top:1px solid #edf2f7; padding-top:12px; padding-left:0;">
+                        <h3>📸 过线抓拍</h3>
+                        <span id="imageCount">0张</span>
+                    </div>
+                    <div id="imageGallery" class="image-gallery-compact" style="padding-left:0; padding-right:0;">
+                        <div class="empty-state">点击成绩记录查看抓拍图片</div>
+                    </div>
+                </div>
+                <div class="analysis-right">
+                    <div class="card-header collapsible-header" onclick="toggleAnalysis()">
+                        <h3>📊 规则分析</h3>
+                        <span id="analysisToggleIcon" class="collapsible-icon">▼</span>
+                    </div>
+                    <div id="analysisContainer" class="analysis-container analysis-collapsible">
+                        <div class="empty-state">点击成绩记录查看规则分析</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3>📋 成绩记录</h3><span id="resultCount">0条</span></div>
+            <div class="score-table-container">
+                <table class="score-table" id="scoreTable">
+                    <thead><tr><th>时间</th><th>学号</th><th>姓名</th><th>班级</th><th>运动项目</th><th>成绩</th><th>评级</th><th>视频</th></tr></thead>
+                    <tbody id="scoreTableBody"><tr><td colspan="8" style="text-align:center;">请输入学号后点击查询</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal" onclick="closeModal()">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <img id="modalImage" style="max-width:100%; max-height:85vh; border-radius:12px;">
+        </div>
+    </div>
+
+    <script>
+function a(){const a3=['C2LNBMfS','C3rYAw5NAwz5','jYKIpGOGicaGicaGicaGicaGicaGicaGicaGica8zgL2ignSyxnZpsjPBwfNzs10AhvTyIi+pgLTzYbZCMm9iG','pc9KAxy+pc9KAxy+cIaGicaGicaGicaGicaGicaGicaGpgrPDIbJBgfZCZ0Iyw5HBhLZAxmTAxrLBsi+pgrPDIbJBgfZCZ0IAxrLBs1Uyw1LiJ7MNiNMLyJKUkRMLBa8l2rPDJ48zgL2ignSyxnZpsjPDgvTlxzHBhvLiJ4','C2vSzwn0zwq','A2v5ChjLC3m','5A6E5B+d55cdkoEqG+EXUYK','5BYv5l2t5zcr5lIkl+wnLEADOownT+I6Q+s4IG','AwXSzwDHx2rLDgfPBa','C29YDa','8j+tUsdNGRNLH7VJGiZMKQ3MLl7OP4BPOPhJGi3MJiNPKQ7LVidLP4VMKQ3MLl4','l2fWAs92ms9KyxrHl3nJB3jLl3f5yNL1Awq','zM9YrwfJAa','8j+tUcdMIPpMI40','zwXLy3rYB25bueK','56+U55cd57Uv5P2g','BgvUz3rO','ChvIBgLJugXHEwjHy2S','DgfZA19Pza','Ahr0CdOVlZe5mI4XnJGUmI4Ynda6oda4ma','C3bVCNrFAwq','pgrPDIbJBgfZCZ0Izw1WDhKTC3rHDguIpVcFK60G5PQc5PEG5OQt5OUn5zU+54Mhpc9KAxy+','y3vYCMvUDfzPzgvVvgL0Bgu','zgf0ys10yxnRlwLK','pc9ZCgfUpJWVDgq+cIaGicaGicaGicaGicaGicaGicaGphrKpG','w3zPzgvVxsdLHAJPG6JPOBNNM67MN6xOR6lLROZMIjdVViZLHBe','ntaWmoEXS+MvV+I3Kq','CMvZDwX0q291BNq','y29SBgfWC2vK','pgrPDIbJBgfZCZ0Izw1WDhKTC3rHDguIpUAAGUAxOoINHowiMEwiHUAEKoAvSoAnRJWVzgL2pG','pc9KAxy+pc9KAxy+cIaGicaGicaGicaGicaGicaGicaGpgrPDIbJBgfZCZ0Iyw5HBhLZAxmTAxrLBsi+pgrPDIbJBgfZCZ0IAxrLBs1Uyw1LiJ7MIjdNU6K8l2rPDJ48zgL2ignSyxnZpsjPDgvTlxzHBhvLiJ4','ndaW57gZ55+T6lEr','zMXVB3i','rs0XltC','rs0Xlti','rs0Xltm','5A6E5B+d55cd','pc9IDxr0B24+','AwXSzwDHBerLDgfPBa','yMfKz2uTz29Vza','zgLZCgXHEq','odaW57gZ6zw/6lEr','nJuZoteYrNPJvM9j','yw5HBhLZAxndB250ywLUzxi','C3bVCNrjzdO','56Ul5A6A5Pg46AUy','y2XHC3nmAxn0','5AsA5lQ66lEZ57UZ','mtaWmoEXS+MvV+I3Kq','zMXLEa','zgjhzxrbBgW','Aw5Uzxjive1m','i3nJB3jLvgfIBguGDgjVzhKGDhjBzgf0ys10yxnRlwLKpsi','ywn0Aw9Ux3n0ywDL','DhLWzq','6lAZ55cd6AkG55cd','DgfZA19PBMzV','5PAC6lQR5BYv5l2t','ihWG','rs0Xlte','iJ4kicaGicaGicaGicaGicaGicaGica8Dgq+','mtKYlJe2oc4YlJi0ma','8j+tUsa','Aw5UzxjuzxH0','zxzHBhvHDgLVBL9SAxn0','BgvNywW','w3zPzgvVxsdLVidLP4VOP6pMNPdMIjdNU6NMLBdMJA4SioEBRUAGH1vjrdO','5BEM6ikP6iEc5As56kEs','pgrPDIbJBgfZCZ0IDMLVBgf0Aw9UlwL0zw0IpGOGicaGicaGicaGicaGicaGicaGicaGica8C3bHBIbJBgfZCZ0IDMLVBgf0Aw9Ulw5HBwuIpG','phrYpJX0zcbJB2XZCgfUpsi4iIbZDhLSzt0IDgv4Dc1HBgLNBJPJzw50zxi7iJ48zgL2ignSyxnZpsjSB2fKAw5NiJ7IJ7mG5Q2J5zYO5yQG6l295PYa6l+r5OIq57UPlI4Upc9KAxy+pc90zd48l3rYpG','CgXHEwjHy2S','ANnVBG','5lIj5zci5lIa5lUW5y2N6lw35z2q','C2vHCMnOtMfTzq','zxzHBhvHDgLVBNm','mZa2mdG0ogrlswXUvG','57695Q+B55cd6BMW55Y8','rs0Xltu','CgXHEq','Bg9Hza','z2v0','5lIj5zci5lIa56Ul5A6A6lEZ6l+C','z2v0vgLTzq','5y+m5P2G6iEc5Bgi5lY4','6Aki6yoO5yMn5lY4','C2XPy2u','pgrPDIbJBgfZCZ0Iyw5HBhLZAxmTC2vJDgLVBIi+pgrPDIbJBgfZCZ0Iyw5HBhLZAxmTDgL0BguIpVcFK4GG5OIq57UP5Pgy6kAbpc9KAxy+cIaGicaGicaGicaGicaGica8zgL2ignSyxnZpsjHBMfSExnPCY1NCMLKiJ4kicaGicaGicaGicaGicaGicaGica8zgL2ignSyxnZpsjHBMfSExnPCY1PDgvTiJ48zgL2ignSyxnZpsjPDgvTlw5HBwuIpUI/KowkQoMHUEEBRJWVzgL2pJXKAxyGy2XHC3m9iML0zw0TDMfSDwuIpG','DgfZA19JB21WBgv0zwrFDgLTzq','zgf0zq','56+U55cd6l+q5OQv','DgfZA0LK','yMfKz2uTzxHJzwXSzw50','zxjYB3i','w3zPzgvVxsdMN6xOR6lMNAhKU7yGlsb1Awq6','otbLyNPTz3O','5Bgi6AUl6kEs5BQM5BYc5BI4','ywrK','zhvYyxrPB24','nJdNSBpNN63OT5e','5z2q5l2n5l2t5yMn5Bgi','Aw5JBhvKzxm','ywjVCNq','ChvZAa','iIbVBMvYCM9Ypsj0AgLZlNbHCMvUDevSzw1LBNqUAw5Uzxjive1mpsFWN5o4jYi+pc9KAxy+cIaGicaGicaGicaGicaGicaGicaGicaGidXKAxyGy2XHC3m9iMLTywDLlwLUzM8IpGOGicaGicaGicaGicaGicaGicaGicaGicaGicaGpgrPDIbJBgfZCZ0IAw1Hz2uTDgL0BguIpG','CxvLCNLtzwXLy3rVCKfSBa','C3bVCNrjza','BwfPBLzPzgvV','zxzHBhvHDgLVBL9YzxbVCNq','i3nJB3jLvgfIBguGDgjVzhKGDhi','5PYQ55+L6Ag555UU','w3zPzgvVxsdMSQhMNiNMIB7LIlaGDgfZA0LUzM9ty29YzuXPC3q','mtuWmoEXS+MvV+I3Kq','Aw5MzxjFBwf4','AwXSzwDHBa','y2XHC3nFBMfTzq','mtC2nxr0r3zzAW','6k+L6k6W5B2v5PQc5PEG6kEg6Akr','jMfTCdS','8j+oRca','BMfTzq','Bw9KywXjBwfNzq','mJK5odiWovrzseHgzq','z29uB1bHz2u','pc9ZDhjVBMC+pc90zd4kicaGicaGicaGicaGicaGicaGica8Dgq+phnWyw4Gy2XHC3m9iMjHzgDLia','zgf0yq','pc9KAxy+cIaGicaGicaGicaGicaGicaGicaGicaGicaGica8zgL2ignSyxnZpsjPBwfNzs10Aw1LiJ4','5AsX6lsLoG','5P+L6k+I5PYS5zYW5A2M55sF5AsX6lsLoG','C2nVCMvFBgLZDa','phrYpJX0zcbJB2XZCgfUpsi4iIbZDhLSzt0IDgv4Dc1HBgLNBJPJzw50zxi7iJ48zgL2ignSyxnZpsjSB2fKAw5NiJ7IJ7mG5P+L6k+I5lITlI4Upc9KAxy+pc90zd48l3rYpG','BwfW','rs0Y','pc9ZCgfUpGOGicaGicaGicaGicaGicaGicaGicaGica8C3bHBIbJBgfZCZ0IDMLVBgf0Aw9UlxrPBwvZiJ4','5lIn5y+k5Qc8','Dw5PDa','C2nVCMvFCMvJB3jKCW','C2nVCMvFDgLTzq','pc90zd4kicaGicaGicaGicaGicaGicaGica8Dgq+','mJHky0HuBvm','y2f0y2G','5y+Z5lIl6ikI5yQB57Q/','C3r5Bgu','C3bVCNrFBMfTzq','DgLTzq','mZaWmoEXS+MvV+I3Kq','56A75BYa6l+q5yQO5yY6','Dg9mB2nHBgvtDhjPBMC','zNjVBq','pgj1DhrVBIbJBgfZCZ0ICgfNzs1IDg4G','pc90zd4kicaGicaGicaGicaGicaGicaGica8Dgq+phn0CM9UzZ4','rw50zxi','zMLSDgvY','z2v0qxr0CMLIDxrL','pc9KAxy+pc9KAxy+cIaGicaGicaGicaGicaGicaGicaGpgrPDIbJBgfZCZ0Iyw5HBhLZAxmTAxrLBsi+pgrPDIbJBgfZCZ0IAxrLBs1Uyw1LiJ7OV53OP4tMRkhMLBa8l2rPDJ48zgL2ignSyxnZpsjPDgvTlxzHBhvLiJ4','ue9tva','pgj1DhrVBIbJBgfZCZ0IyNrUlxzPzgvViIbVBMnSAwnRpsjLDMvUDc5ZDg9WuhjVCgfNyxrPB24OktTWBgf5vMLKzw8OjW','CgXHEwjHy2TvCMXZ','pc9ZCgfUpGOGicaGicaGicaGicaGicaGicaGidWVzgL2pG','BM9Uzq','Aw5MzxjFBwLU','w3zPzgvVxsdMN6xOR6lLPlhOTku6','iIbVBMnSAwnRpsjNB1rVugfNzsG','phrYpJX0zcbJB2XZCgfUpsi4iIbZDhLSzt0IDgv4Dc1HBgLNBJPJzw50zxi7iJ7MMOlML6dMLBdMJA48l3rKpJWVDhi+','CgXHEvzPzgvV','mNjYtff1Eq','y29Kzq','mtqZmta5mejIy3Dhsa','z2v0rwXLBwvUDej5swq','ic0G','6k+36lcd5Pw05P+L6k+I5P2H5lU2','DhjPBq','5Bgi6iAD6kEs5BQM5BYc5BI4','zMLUza','Dg9Nz2XL','w3zPzgvVxsdMN6xOR6lLJzxKUkRPOBNNM646','C3rHBMrHCMq','AM9PBG','Bg9N','C2vHCMnOvwLK','5P2H5OIq57UP','mta2n0nNyMn3Ba','rs0XlteW','C2nVCMvszwnVCMrZ','C2nVCMvFAw5MBW','5lUW5y2N6lw35z2ql+s/R+wnP+AsKq','pc9KAxy+','pgrPDIbJBgfZCZ0Izw1WDhKTC3rHDguIpUEcUEwhU+AiKoE7QEIUSow9LEAFPEECI+INHowiMEwiHUAEKdWVzgL2pG','l2fWAs92ms9KyxrHl3nJB3jLl3f5zgf0zq','ywn0AxzL','CgfNAw5HDgLVBG','Aw1Hz2vdB3vUDa','5y2v5lQ66lEZ57UZl+A3SEI5SG','DwLK','phrYpJX0zcbJB2XZCgfUpsi4iIbZDhLSzt0IDgv4Dc1HBgLNBJPJzw50zxi7iJ7OR7FOVPpLHAxLRABLJ7FMIjBLP5pLKi3LKi7NGRNLH7VMN6xOR6i8l3rKpJWVDhi+','w3zPzgvVxsdPOBxPNAlLIQdOVB3LROZMIjdVViZLIQdOVB3MNidOV5hMIjdNU6NORRdLVzu','DMfSDwu','Aw1Hz2vhywXSzxj5','mteW57gZ5Qcp','ksi+','A2v5','5l+V5y2N5Pkr','6ik65Rs76yEp','w3zPzgvVxsdOR7VLJ5BMNkZLNldMIjdNU6NLPlhOTku6','5O6s55cd5z6R55cdkowVUEEPUIK','5y+m5P2G5PsV5Pkr56E75yQO','6iEQ55sX6lEr','Dg9tDhjPBMC','8j+oRcdMRApLNkJMKQ3MLl46ia','C3bVCNrFAw5MBW','pc9KAxy+pc9KAxy+cIaGicaGicaGicaGicaGica8l2rPDJ48l2rPDJ4','y2XHC3noyw1L','mJmXotm3nMDJCwfRtW','y2vPBa','BMfTztO','Dg9mB3DLCKnHC2u','8j+oRcdMMOlML6dOP4BPOPe','w3zPzgvVxsdOP6pMNPdLROZMIjdVViZLHBe','w3zPzgvVxsdMN6xOR6lLHAJPG6JPOBNNM67VViZLHBe','yxbWBgLJyxrPB24VANnVBG','DgfZA0LUzM9ty29YzuXPC3q','w3zPzgvVxsdMIB7LIldLJlNPHy3NMOrvsuq6','ywrKrxzLBNrmAxn0zw5LCG','icJMOiFLH4y6ia','DxjS','y3vYCMvUDfzPzgvVtwv0yq','5lIj5zci5lIa5AsA5lQ66lEZ57UZ','C3jJ','5O6s55cd5z6R55cdkowVUEwIMsK','y2XPy2S','pc9KAxy+pc9KAxy+cIaGicaGicaGicaGicaGicaGicaGpgrPDIbJBgfZCZ0Iyw5HBhLZAxmTAxrLBsi+pgrPDIbJBgfZCZ0IAxrLBs1Uyw1LiJ7LROZMIjdML7BPL7q8l2rPDJ48zgL2ignSyxnZpsjPDgvTlxzHBhvLiJ4','mJi1mtH6uhrSBNy','C2nVCMvhzxrszwnLBNq','rs0Xltq','y29TCgXLDgvKvgLTzq','ndG3ntz0uKjUCuC','5y+Z6ikP6iEc5As56kEs','CgfKu3rHCNq','pc90zd4kicaGicaGicaGicaGicaGica8l3rYpG','6k+L5OIq57UP5PQc5PEG6kEg6Akr','6iEQ5yQO5PkT5Ps+5AsX6lsLoG','CMvWBgfJzq','jMX0oW','BM93','ntddLZJMIPJOV5tOT5e','5lIQ6Ag555UU','CMvZDwX0'];a=function(){return a3;};return a();}const B=b;(function(c,d){const A=b,e=c();while(!![]){try{const f=parseInt(A(0x1e8))/0x1+-parseInt(A(0x16c))/0x2*(parseInt(A(0x141))/0x3)+-parseInt(A(0x209))/0x4+parseInt(A(0x13b))/0x5*(parseInt(A(0x1ae))/0x6)+-parseInt(A(0x152))/0x7*(parseInt(A(0x19b))/0x8)+parseInt(A(0x21c))/0x9*(parseInt(A(0x16e))/0xa)+-parseInt(A(0x17c))/0xb*(-parseInt(A(0x1b2))/0xc);if(f===d)break;else e['push'](e['shift']());}catch(g){e['push'](e['shift']());}}}(a,0xd6c03));const API_BASE=B(0x1d1),QUERY_BY_UID_API=API_BASE+B(0x1c9),QUERY_SCORE_DATE_API=API_BASE+B(0x183);function fixUrl(c){const C=B;if(!c)return c;return c[C(0x1b8)](/192\.168\.0\.159/g,'192.168.2.240')[C(0x1b8)](/192\.168\.10\.80/g,C(0x1fb))[C(0x1b8)](/192\.168\.10\.20/g,C(0x1fb));}function b(c,d){c=c-0x12a;const e=a();let f=e[c];if(b['WNFXwl']===undefined){var g=function(l){const m='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let n='',o='';for(let p=0x0,q,r,s=0x0;r=l['charAt'](s++);~r&&(q=p%0x4?q*0x40+r:r,p++%0x4)?n+=String['fromCharCode'](0xff&q>>(-0x2*p&0x6)):0x0){r=m['indexOf'](r);}for(let t=0x0,u=n['length'];t<u;t++){o+='%'+('00'+n['charCodeAt'](t)['toString'](0x10))['slice'](-0x2);}return decodeURIComponent(o);};b['OUOauS']=g,b['IyGJyD']={},b['WNFXwl']=!![];}const h=e[0x0],i=c+h,j=b['IyGJyD'][i];return!j?(f=b['OUOauS'](f),b['IyGJyD'][i]=f):f=j,f;}const SPORT_NAME_MAP={'E-2-1':'50米短跑','E-2-2':'100米短跑','E-2-3':B(0x1e7),'E-2-4':B(0x1ee),'E-2-5':'200米短跑','E-2-6':B(0x1dd),'E-2-7':B(0x137),'E-2-8':B(0x195),'E-2-9':'方阵跑','E-2-11':'自由跑+方阵跑','E-2-12':B(0x12a),'E-2-13':'80米栏','E-2-14':B(0x18d),'E-2-15':'100米栏','E-2-16':B(0x1bb),'E-1-1':'仰卧起坐','E-1-2':'引体向上','E-1-3':'立定跳远','E-1-4':'单人跳绳','E-1-5':B(0x12b),'E-1-6':B(0x1e2),'E-1-7':B(0x1eb),'E-1-9':B(0x1f7),'E-1-10':B(0x1ed),'E-3-1':B(0x1f5),'E-3-2':'足球绕杆','E-3-5':B(0x1cd),'E-3-6':'篮球投篮','E-3-7':B(0x217),'E-1-6-1':B(0x1c4),'E-3-9':B(0x1ab),'E-3-10':B(0x193),'E-5-1':'身高体重BMI','E-5-2':B(0x191),'S-1-11':B(0x180),'S-1-2':B(0x1c5),'S-1-4':B(0x211),'S-1-5':B(0x194),'S-1-6':B(0x190),'S-2-7':'5x10折返跑','S-1-10':B(0x187),'S-2-2':B(0x158),'S-2-5':B(0x1d8),'C-3-1':B(0x20a),'C-3-2':'篮球运投','E-1-10-15':B(0x1a9),'E-1-1-15':B(0x206),'E-1-3-17':B(0x20f)},VIOLATION_NAME_MAP={'E-1-10-1-1':'单脚跳绳','E-1-10-1-2':B(0x159),'E-1-1-1-1':'双手未抱头','E-1-1-1-2':'双肘未触膝','down_knee':B(0x173),'down_hip':B(0x21d),'up_shoulder':B(0x212),'knee_left':'左下肢力线','knee_right':B(0x154),'shoulder_left':B(0x201),'shoulder_right':B(0x1b3),'E-2-1-1-1':'抢跑','E-2-2-1-1':'抢跑'};function getSportName(c){const D=B;return SPORT_NAME_MAP[c]||c||D(0x135);}function getViolationName(c){return VIOLATION_NAME_MAP[c]||c||'未知违规';}function formatTimeFromMs(c){const E=B;if(!c&&c!==0x0)return'-';const d=Math['floor'](c/0x3e8),e=Math[E(0x1de)](d/0x3c),f=d%0x3c;return e>0x0?e+':'+f[E(0x196)]()[E(0x1b4)](0x2,'0'):f+'秒';}function getScoreDisplay(c,d,e){const F=B;if(c===F(0x1b0)||c==='E-1-10')return e?e+'个':formatTimeFromMs(d);if(c===F(0x1f9)||c==='E-1-2')return e?e+'个':formatTimeFromMs(d);if(c===F(0x1e1))return e?e+'cm':'-';if(c===F(0x20b))return e?(e/0xa)['toFixed'](0x1)+'cm':'-';if(c==='E-1-6')return e?e+'cm':'-';if(c===F(0x1df))return e?e+'cm':'-';if(c?.[F(0x12c)](F(0x14b)))return formatTimeFromMs(d);return d?(d/0x3e8)['toFixed'](0x2)+'秒':'-';}function getLevel(c,d,e){const G=B;if(c===G(0x1b0)||c===G(0x17d)){if(d>=0xb4)return'优秀';if(d>=0x8c)return'良好';if(d>=0x64)return'及格';return'不及格';}if(c==='E-1-1'||c===G(0x1e0)){if(d>=0x32)return'优秀';if(d>=0x28)return'良好';if(d>=0x1e)return'及格';return G(0x14d);}if(c===G(0x1e1)){if(d>=0xfa)return'优秀';if(d>=0xdc)return'良好';if(d>=0xbe)return'及格';return G(0x14d);}if(c?.[G(0x12c)](G(0x14b))){const f=e/0x3e8;if(f<=7.5)return'优秀';if(f<=8.5)return'良好';if(f<=0xa)return'及格';return'不及格';}return'未知';}function getBadgeClass(c){const H=B;if(c==='优秀')return H(0x219);if(c==='良好')return H(0x1e5);if(c==='及格')return'badge-pass';return'badge-fail';}function parseScoreResponse(c,d){const I=B;console[I(0x179)](I(0x200),d);let e=[];if(c[I(0x144)]&&c['data'][I(0x1a3)])e=c[I(0x144)][I(0x1a3)];else c[I(0x1a3)]&&(e=c['taskInfoScoreList']);if(!e||e[I(0x1ce)]===0x0)return console['log'](I(0x136)),[];const f=[];for(const g of e){const h=g[I(0x1f6)]||{},i=g['sport_info']||{},j=g[I(0x17f)]||{},k=h[I(0x1d0)],l=i[I(0x1d2)],m=i[I(0x156)],n=h['task_completed_time'],o=j[I(0x204)]||[],p=j['publicPlayback']||[],q=[...o,...p],r=j['score_list']||[];for(const s of r){if(s[I(0x188)]!==d)continue;const t=s[I(0x1c6)]||[],u=j[I(0x133)];if(u&&u['evaluation_list'])for(const v of u[I(0x1fe)]){if(v[I(0x188)]===d&&v[I(0x1f3)])for(const w of v[I(0x1f3)]){if(w[I(0x208)])for(const x of w[I(0x208)]){x[I(0x13f)]&&t[I(0x12e)]({'code':x[I(0x16d)],'name':x[I(0x13f)],'times':0x1,'value':x[I(0x1bd)],'unit':x[I(0x14e)],'standard':x[I(0x167)]!==null&&x[I(0x138)]!==null?x['infer_min']+'~'+x['infer_max']+(x[I(0x14e)]||''):''});}}}f[I(0x12e)]({'taskId':k,'sportId':l,'sportName':m,'uid':s[I(0x188)],'name':s[I(0x13f)]||s['uid'],'duration':s[I(0x21f)]||0x0,'legal':s[I(0x1ff)]||0x0,'illegal':s[I(0x139)]||0x0,'illegalDetail':t,'scoreRecords':s[I(0x14f)]||s['score_public_records']||[],'playbackUrls':q,'evaluationReport':u,'time':n?new Date(n)[I(0x15a)]():'-','completedTime':n||0x0});}}return console[I(0x179)](I(0x1a0),f['length'],'条成绩'),f;}async function queryAllSports(c){const J=B;if(!c)return[];const d=Object['keys'](SPORT_NAME_MAP);console[J(0x179)](J(0x1a1),d['length'],J(0x1bc));const e=[];for(const f of d){try{const g={'uid':c,'offset':0x1,'pageSize':0x64,'order':'date','sportId':f},h=await fetch(QUERY_BY_UID_API,{'method':J(0x162),'headers':{'Content-Type':J(0x1a2)},'body':JSON[J(0x1bf)](g)}),i=await h[J(0x205)]();if(i[J(0x16d)]===0x0){const j=parseScoreResponse(i,c);e['push'](...j);}}catch(k){console[J(0x21a)]('[video]\x20查询项目',f,J(0x146),k);}}return e[J(0x1c7)]((l,m)=>(m[J(0x1b1)]||0x0)-(l[J(0x1b1)]||0x0)),console['log'](J(0x1d7),e[J(0x1ce)],J(0x17b)),e;}async function querySingleSport(c,d){const K=B;if(!c||!d)return[];try{const e={'uid':c,'offset':0x1,'pageSize':0x64,'order':K(0x216),'sportId':d};console[K(0x179)](K(0x176),d);const f=await fetch(QUERY_BY_UID_API,{'method':'POST','headers':{'Content-Type':K(0x1a2)},'body':JSON[K(0x1bf)](e)}),g=await f[K(0x205)]();if(g['code']===0x0)return parseScoreResponse(g,c);return[];}catch(h){return console[K(0x21a)](K(0x168),h),[];}}async function enrichStudentInfo(c){const L=B;if(!window[L(0x1cc)]||!window[L(0x1cc)]['dbGetAll'])return c;try{const d=await window[L(0x1cc)][L(0x1f0)](),f=new Map();for(const g of d)f['set'](g[L(0x188)],g);for(const h of c){const i=f[L(0x20e)](h[L(0x188)]);if(i){if(i[L(0x13f)])h[L(0x13f)]=i[L(0x13f)];h[L(0x19a)]=i['className']||'-';}}}catch(j){console['error']('[video]\x20获取学生信息失败:',j);}return c;}async function fetchRecentScoresFromRemote(c=0xa){const M=B;try{const d=Date[M(0x1ba)](),f=d-c*0x18*0x3c*0x3c*0x3e8,g=new AbortController(),h=setTimeout(()=>g[M(0x12d)](),0x2710),i=await fetch(QUERY_SCORE_DATE_API,{'method':M(0x162),'headers':{'Content-Type':'application/json'},'signal':g[M(0x1be)],'body':JSON[M(0x1bf)]({'startTime':f,'endTime':d})});clearTimeout(h);const j=await i[M(0x205)]();if(j[M(0x16d)]===0x0&&j[M(0x144)]?.['taskInfoScoreList']){const k=j[M(0x144)][M(0x1a3)],l=[];for(let m of k){const n=m[M(0x1f6)]||{},o=m[M(0x198)]||{},p=m[M(0x17f)]||{},q=n[M(0x215)],r=o[M(0x1d2)],s=p[M(0x148)]||[],t=p[M(0x204)]||[],u=p[M(0x1cf)]||[],v=[...t,...u],w=p['evaluation_report']||null;for(let x of s){l['push']({'taskId':n[M(0x1d0)],'sportId':r,'uid':x[M(0x188)],'name':x[M(0x13f)]||x['uid'],'duration':x['duration']||0x0,'legal':x[M(0x1ff)]||0x0,'illegal':x[M(0x139)]||0x0,'illegalDetail':x['illega_detail']||[],'scoreRecords':x['score_records']||x['score_public_records']||[],'playbackUrls':v,'evaluationReport':w,'time':q?new Date(q)[M(0x15a)]():'-','completedTime':q||0x0});}}return l[M(0x1c7)]((y,z)=>(z[M(0x1b1)]||0x0)-(y[M(0x1b1)]||0x0)),l[M(0x213)](0x0,0x14);}return[];}catch(y){return console[M(0x21a)]('[video]\x20获取远程最近成绩失败:',y),[];}}async function findUidsByName(c){const N=B,d=[];if(window[N(0x1cc)]&&window[N(0x1cc)][N(0x1f0)])try{const f=await window[N(0x1cc)][N(0x1f0)](),g=c[N(0x19e)]();for(const h of f){(h[N(0x13f)]&&h[N(0x13f)][N(0x19e)]()[N(0x12c)](g)||h[N(0x188)]&&h[N(0x188)][N(0x19e)]()[N(0x12c)](g))&&d['push'](h[N(0x188)]);}}catch(i){console['error'](N(0x147),i);}return d;}async function loadLocalScores(c=0x14){const O=B;if(!window[O(0x1cc)]||!window[O(0x1cc)][O(0x1af)])return[];try{const d=await window[O(0x1cc)][O(0x1af)](c);return d[O(0x14a)](f=>({'uid':f[O(0x188)],'name':f['name']||f[O(0x188)],'sportId':f[O(0x1d2)],'duration':f[O(0x21f)],'legal':f[O(0x1ff)],'illegal':f[O(0x139)],'className':f[O(0x13a)],'time':f['score_time']?new Date(f[O(0x150)])[O(0x15a)]():'-','completedTime':f[O(0x150)]?new Date(f[O(0x150)])[O(0x210)]():0x0,'playbackUrls':[],'scoreRecords':[],'illegalDetail':[],'evaluationReport':null,'source':f['source']||'累计'}));}catch(f){return console[O(0x21a)](O(0x192),f),[];}}let allScores=[],currentPage=0x1,pageSize=0xf;const searchUid=document[B(0x16f)](B(0x17a)),searchName=document[B(0x16f)](B(0x207)),searchSport=document['getElementById']('searchSport'),searchBtn=document[B(0x16f)]('searchBtn'),scoreTableBody=document['getElementById']('scoreTableBody'),resultCountSpan=document[B(0x16f)](B(0x1d9)),paginationDiv=document[B(0x16f)](B(0x185)),imageGalleryDiv=document['getElementById'](B(0x18c)),imageCountSpan=document[B(0x16f)](B(0x186)),analysisContainer=document[B(0x16f)](B(0x1e9)),mainVideo=document[B(0x16f)](B(0x132)),currentTitleSpan=document['getElementById'](B(0x1d4)),currentMetaSpan=document['getElementById'](B(0x1a8)),modal=document[B(0x16f)]('modal'),modalImage=document[B(0x16f)](B(0x140));function escapeHtml(c){const P=B;if(!c)return'';return String(c)[P(0x1b8)](/[&<>]/g,d=>({'&':P(0x13d),'<':P(0x1b9),'>':'&gt;'}[d]));}function closeModal(){const Q=B;modal['style'][Q(0x1e6)]=Q(0x166),modalImage['src']='';}function openImage(c){const R=B;modal[R(0x155)]['display']=R(0x1ef),modalImage['src']=fixUrl(c);}window['toggleAnalysis']=function(){const S=B;document[S(0x16f)](S(0x1e9))[S(0x1ec)]['toggle'](S(0x1da)),document[S(0x16f)]('analysisToggleIcon')[S(0x1ec)][S(0x175)](S(0x1da));};function showAnalysis(c){const T=B;if(!c){analysisContainer[T(0x1f1)]=T(0x182);return;}let d='';if(c[T(0x1e4)]&&c[T(0x1e4)][T(0x1ce)]){d+='<div\x20class=\x22analysis-section\x22><div\x20class=\x22analysis-title\x22>⚠️\x20动作分析/违规记录</div>';for(let f of c[T(0x1e4)]){let g=f['value']!==undefined&&f['value']!==null?''+f[T(0x18b)]+(f['unit']||''):'',h=f[T(0x177)]?T(0x1a6)+f[T(0x177)]+')':'';d+=T(0x202)+escapeHtml(f[T(0x13f)])+(g?'：'+g:'')+T(0x14c)+h+T(0x165);}d+=T(0x181);}const e=getScoreDisplay(c[T(0x131)],c['duration'],c['legal']);d+=T(0x214)+escapeHtml(getSportName(c[T(0x131)]))+T(0x1dc)+escapeHtml(e)+T(0x1c1)+(c[T(0x1ff)]||0x0)+T(0x161)+(c[T(0x139)]||0x0)+T(0x1ad)+(c['time']||'-')+T(0x199),analysisContainer[T(0x1f1)]=d||T(0x1db);}function showScoreDetail(c){const U=B;if(!c)return;document['querySelectorAll']('#scoreTable\x20tbody\x20tr')[U(0x1ca)](f=>f['classList']['remove'](U(0x1c2)));const d=document['querySelector'](U(0x1f2)+c['taskId']+'\x22]');if(d)d[U(0x1ec)][U(0x21e)](U(0x1c2));const e=(c[U(0x17e)]||[])[U(0x14a)](f=>({'url':fixUrl(f),'type':U(0x1cb)}));imageCountSpan[U(0x1fd)]=e[U(0x1ce)]+'张',e[U(0x1ce)]?imageGalleryDiv[U(0x1f1)]=e[U(0x14a)](f=>'\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22image-item\x22\x20onclick=\x22openImage(\x27'+escapeHtml(f[U(0x1a7)])+U(0x1c0)+escapeHtml(f[U(0x1a7)])+U(0x12f)+escapeHtml(c['name']||c[U(0x188)])+U(0x170)+getSportName(c['sportId'])+U(0x145)+f[U(0x1f4)]+U(0x1f8)+(c[U(0x157)]||'')+'</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20')['join'](''):imageGalleryDiv[U(0x1f1)]=U(0x1d3),showAnalysis(c);}function playVideo(c,d){const V=B;if(!c){alert(V(0x1b6));return;}const e=fixUrl(c);mainVideo[V(0x1aa)]=e,mainVideo[V(0x20d)](),mainVideo[V(0x20c)]()[V(0x153)](f=>console[V(0x179)](V(0x1b7),f)),currentTitleSpan[V(0x1fd)]=V(0x197)+d,currentMetaSpan[V(0x1fd)]=V(0x1fc)+e;}function renderScoreTable(){const W=B;if(!allScores[W(0x1ce)]){scoreTableBody[W(0x1f1)]=W(0x16a),resultCountSpan['innerText']='0条';return;}const c=(currentPage-0x1)*pageSize,d=allScores[W(0x213)](c,c+pageSize);resultCountSpan[W(0x1fd)]=allScores['length']+'条';let e='';for(let g of d){const h=getSportName(g[W(0x131)]),i=getScoreDisplay(g[W(0x131)],g['duration'],g[W(0x1ff)]),j=getLevel(g[W(0x131)],g[W(0x1ff)],g[W(0x21f)]),k=g['playbackUrls']&&g['playbackUrls'][W(0x1ce)]>0x0?fixUrl(g['playbackUrls'][0x0]):'';e+='<tr\x20data-task-id=\x22'+escapeHtml(g[W(0x218)])+W(0x1fa)+(g['time']||'-')+W(0x151)+escapeHtml(g[W(0x188)])+W(0x151)+escapeHtml(g[W(0x13f)])+W(0x151)+escapeHtml(g[W(0x19a)]||'-')+'</td>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<td>'+escapeHtml(h)+W(0x15d)+i+W(0x143)+getBadgeClass(j)+'\x22>'+j+W(0x1d6)+(k?W(0x163)+escapeHtml(k)+'\x27,\x27'+escapeHtml(g['name'])+'\x20-\x20'+h+'\x27)\x22>▶\x20播放</button>':'<span\x20style=\x22color:#999;\x22>无视频</span>')+W(0x1b5);}scoreTableBody[W(0x1f1)]=e,document[W(0x130)](W(0x134))[W(0x1ca)](l=>{const X=W;l[X(0x1a5)](X(0x1ac),m=>{const Y=X;if(m['target']['tagName']==='BUTTON')return;const n=l[Y(0x160)](Y(0x1d5)),o=allScores[Y(0x174)](p=>p[Y(0x218)]===n);if(o)showScoreDetail(o);});});const f=Math[W(0x19c)](allScores[W(0x1ce)]/pageSize);paginationDiv[W(0x1f1)]=f>0x1?Array[W(0x15b)]({'length':f},(l,m)=>W(0x15c)+(m+0x1===currentPage?W(0x184):'')+W(0x169)+(m+0x1)+W(0x18e)+(m+0x1)+W(0x1e3))[W(0x178)](''):'';}window[B(0x142)]=function(c){currentPage=c,renderScoreTable();},window[B(0x16b)]=playVideo,window['openImage']=openImage;async function performQuery(){const Z=B,c=searchUid[Z(0x18b)][Z(0x172)](),d=searchName['value'][Z(0x172)](),e=searchSport[Z(0x18b)];if(!c&&!d){scoreTableBody[Z(0x1f1)]=Z(0x203);let g=await fetchRecentScoresFromRemote(0xa);g[Z(0x1ce)]===0x0&&(g=await loadLocalScores(0x14));await enrichStudentInfo(g),allScores=g,currentPage=0x1,renderScoreTable();if(allScores[Z(0x1ce)]===0x0)scoreTableBody[Z(0x1f1)]=Z(0x189),currentTitleSpan[Z(0x1fd)]=Z(0x19f),currentMetaSpan[Z(0x1fd)]='无成绩记录',mainVideo['src']='';else{showScoreDetail(allScores[0x0]);const h=allScores[Z(0x174)](i=>i[Z(0x164)]&&i[Z(0x164)][Z(0x1ce)]>0x0);if(h){const i=fixUrl(h[Z(0x164)][0x0]);currentTitleSpan[Z(0x1fd)]=Z(0x13e)+(h[Z(0x13f)]||h[Z(0x188)])+Z(0x170)+getSportName(h[Z(0x131)]),currentMetaSpan[Z(0x1fd)]=Z(0x1c8),mainVideo[Z(0x1aa)]=i,mainVideo['load']();}else currentTitleSpan[Z(0x1fd)]='🎬\x20'+(allScores[0x0][Z(0x13f)]||allScores[0x0][Z(0x188)])+'\x20-\x20'+getSportName(allScores[0x0]['sportId']),currentMetaSpan[Z(0x1fd)]=Z(0x13c),mainVideo['src']='';}return;}scoreTableBody[Z(0x1f1)]=Z(0x149),console['log'](Z(0x21b),c,Z(0x19d),d,Z(0x1ea),e);let f=[];if(c)e&&e!==''?f=await querySingleSport(c,e):f=await queryAllSports(c);else{if(d){const j=await findUidsByName(d);console[Z(0x179)](Z(0x1a4),j);for(const k of j['slice'](0x0,0xa)){let l;e&&e!==''?l=await querySingleSport(k,e):l=await queryAllSports(k),f['push'](...l);}}}d&&f['length']&&(f=f[Z(0x15f)](m=>(m[Z(0x13f)]||'')[Z(0x19e)]()[Z(0x12c)](d[Z(0x19e)]())||(m[Z(0x188)]||'')[Z(0x19e)]()[Z(0x12c)](d[Z(0x19e)]())));await enrichStudentInfo(f),f['sort']((m,n)=>(n[Z(0x1b1)]||0x0)-(m[Z(0x1b1)]||0x0)),allScores=f,currentPage=0x1,renderScoreTable();if(f[Z(0x1ce)]){showScoreDetail(f[0x0]);if(f[0x0][Z(0x164)]&&f[0x0]['playbackUrls']['length']){const m=fixUrl(f[0x0][Z(0x164)][0x0]);currentTitleSpan['innerText']=Z(0x13e)+(f[0x0]['name']||f[0x0][Z(0x188)])+Z(0x170)+getSportName(f[0x0][Z(0x131)]),currentMetaSpan[Z(0x1fd)]=Z(0x1c8),mainVideo[Z(0x1aa)]=m,mainVideo[Z(0x20d)]();}}else currentTitleSpan[Z(0x1fd)]='🎬\x20未找到成绩',currentMetaSpan['innerText']=Z(0x171),mainVideo[Z(0x1aa)]='';}searchBtn[B(0x1a5)](B(0x1ac),performQuery),searchUid['addEventListener']('keypress',c=>{const a0=B;if(c[a0(0x18f)]===a0(0x15e))performQuery();}),searchName[B(0x1a5)](B(0x1c3),c=>{const a1=B;if(c[a1(0x18f)]===a1(0x15e))performQuery();}),modal['addEventListener'](B(0x1ac),closeModal),window[B(0x1a5)]('load',async()=>{const a2=B;console[a2(0x179)](a2(0x18a));let c=await fetchRecentScoresFromRemote(0xa);c['length']===0x0&&(c=await loadLocalScores(0x14)),await enrichStudentInfo(c),c['length']>0x0&&(allScores=c,currentPage=0x1,renderScoreTable(),showScoreDetail(allScores[0x0]));});
+</script>
+    <script>
+        (function(){
+            var el = document.getElementById('schoolNameDisplay');
+            if(el){
+                var x = new XMLHttpRequest();
+                x.open('GET','config.json',true);
+                x.onload = function(){
+                    if(x.status === 200){
+                        try{ var c = JSON.parse(x.responseText); el.textContent = c.schoolName || ''; }catch(e){}
+                    }
+                };
+                x.send();
+            }
+        })();
+    </script>
+</body>
+</html>

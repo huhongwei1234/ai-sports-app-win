@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>底库管理 - AI体育</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        body { padding-bottom: 20px; }
+        .avatar { width: 35px; height: 35px; background: #ff9800; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+        .two-columns { display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch; }
+        .camera-panel { flex: 1.2; min-width: 320px; display: flex; flex-direction: column; }
+        .control-panel { flex: 1; min-width: 320px; display: flex; flex-direction: column; }
+        .video-wrapper { position: relative; width: 100%; background: #333; border-radius: 12px; overflow: hidden; min-height: 280px; display: flex; align-items: center; justify-content: center; }
+        .video-container { width: 100%; border-radius: 12px; overflow: hidden; }
+        video { width: 100%; border-radius: 12px; background: #333; display: block; }
+        video.mirror { transform: scaleX(-1); }
+        .camera-placeholder { text-align: center; padding: 40px 20px; color: white; background: #333; border-radius: 12px; }
+        .camera-control-bar { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .camera-select { flex: 2; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: white; }
+        .switch-camera-btn { flex: 1; background: #ff9800; color: white; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; }
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        button { padding: 10px 16px; font-size: 13px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        button:active { transform: scale(0.97); }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-warning { background: #ff9800; color: white; }
+        .btn-info { background: #2196F3; color: white; }
+        .btn-secondary { background: #9e9e9e; color: white; }
+        .btn-purple { background: #9c27b0; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        input, select { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        label { font-weight: bold; display: block; margin-top: 8px; margin-bottom: 2px; font-size: 13px; }
+        .form-row { display: flex; gap: 10px; }
+        .form-row > div { flex: 1; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 8px; font-size: 13px; transition: all 0.3s; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .query-result { background: #e8f4f8; padding: 12px; border-radius: 10px; margin-top: 15px; border-left: 4px solid #2196F3; max-height: 300px; overflow: auto; }
+        .query-result h4 { margin-bottom: 10px; color: #1e3c72; font-size: 14px; }
+        .query-detail-row { display: flex; padding: 6px 0; border-bottom: 1px solid #ddd; font-size: 13px; }
+        .query-detail-label { font-weight: bold; width: 100px; color: #1e3c72; }
+        .query-detail-value { flex: 1; color: #333; word-break: break-all; }
+        .image-source-tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; }
+        .tab-btn { background: none; border: none; padding: 8px 16px; cursor: pointer; font-size: 14px; color: #666; border-radius: 8px 8px 0 0; }
+        .tab-btn.active { background: #1e3c72; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .upload-preview-area { margin-top: 15px; text-align: center; display: none; }
+        .upload-preview-img { max-width: 100%; max-height: 200px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        #photoPreview { width: 100%; border-radius: 12px; margin-top: 10px; }
+        .card { background: white; border-radius: 20px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 20px; height: 100%; display: flex; flex-direction: column; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
+        .card-header h3 { font-size: 18px; color: #1e3c72; }
+        .no-header-card { padding: 0 18px 18px 18px; }
+        .card-content { flex: 1; }
+
+        /* 交互风格统一 - 来自 student.html */
+        .error-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #f44336;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 13px;
+            z-index: 1001;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: none;
+            white-space: nowrap;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            width: 460px;
+            max-width: 92%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .modal-box h3 { color: #1e3c72; margin-bottom: 12px; font-size: 16px; }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+            justify-content: flex-end;
+        }
+        .batch-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #f0f0f0;
+        }
+        .batch-section-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 10px;
+        }
+        .progress-container {
+            background: #e8f0fe;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        .progress-bar-bg {
+            background: #ddd;
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            background: #4CAF50;
+            height: 8px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .conflict-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+        .conflict-tag.warn { background: #fff3cd; color: #856404; }
+        .conflict-tag.error { background: #f8d7da; color: #721c24; }
+        .conflict-tag.ok { background: #d4edda; color: #155724; }
+
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .card { padding: 14px; }
+            .no-header-card { padding: 0 14px 14px 14px; }
+            .btn-group button { flex: 1; padding: 10px 12px; font-size: 12px; }
+            .nav-links button.nav-btn { padding: 4px 8px; font-size: 11px; }
+            .logo span { display: none; }
+            .camera-control-bar { flex-direction: column; }
+            .camera-select { width: 100%; }
+            .switch-camera-btn { width: 100%; }
+            .two-columns { flex-direction: column; }
+            .query-detail-row { flex-direction: column; }
+            .query-detail-label { width: 100%; margin-bottom: 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🏃 AI体育<span>底库管理</span></div>
+        <div class="nav-links">
+            <button class="nav-btn" onclick="location.href='index.html'">数据看板</button>
+            <button class="nav-btn" onclick="location.href='student.html'">学生管理</button>
+            <button class="nav-btn" onclick="location.href='score.html'">成绩分析</button>
+            <button class="nav-btn" onclick="location.href='video.html'">视频回放</button>
+            <button class="nav-btn active" onclick="location.href='camera.html'">底库管理</button>
+        </div>
+        <div class="user-info">
+            <span class="school-name-display" id="schoolNameDisplay"></span>
+            <img class="logo-img" src="./logo.jpg" alt="logo" onerror="this.style.display='none'">
+        </div>
+    </div>
+
+    <div class="back-home">
+        <a href="index.html" class="back-home-btn">🏠 返回</a>
+    </div>
+
+    <div class="container">
+        <div class="two-columns">
+            <!-- 左侧：摄像头/相册区域 -->
+            <div class="camera-panel">
+                <div class="card no-header-card">
+                    <div class="image-source-tabs">
+                        <button class="tab-btn active" data-tab="camera">📸 摄像头</button>
+                        <button class="tab-btn" data-tab="upload">🖼️ 相册</button>
+                    </div>
+                    <div class="card-content">
+                        <div id="cameraTab" class="tab-content active">
+                            <div class="video-wrapper">
+                                <div class="video-container">
+                                    <video id="video" autoplay playsinline muted style="display:none;"></video>
+                                </div>
+                                <canvas id="canvas" style="display:none;"></canvas>
+                                <div id="cameraPlaceholder" class="camera-placeholder">📷 摄像头未开启<br><span style="font-size:12px;">点击下方「开启摄像头」</span></div>
+                            </div>
+                            <div class="camera-control-bar">
+                                <select id="cameraSelect" class="camera-select" style="display:none;"><option value="">-- 选择摄像头 --</option></select>
+                                <button class="switch-camera-btn" id="switchCameraBtn" style="display:none;">🔄 切换前后置</button>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn-primary" id="startCameraBtn">📷 开启摄像头</button>
+                                <button class="btn-info" id="takePhotoBtn">📸 拍照</button>
+                                <button class="btn-secondary" id="resetCameraBtn">🔄 重置</button>
+                            </div>
+                        </div>
+                        <div id="uploadTab" class="tab-content">
+                            <div class="video-wrapper">
+                                <div id="uploadPlaceholder" style="background:#f5f5f5;border-radius:12px;padding:40px;text-align:center;color:#999;">📂 点击下方按钮选择照片</div>
+                                <div id="uploadPreviewArea" class="upload-preview-area"><img id="uploadPreviewImg" class="upload-preview-img" alt="预览"></div>
+                            </div>
+                            <div class="btn-group">
+                                <input type="file" id="imageUpload" accept="image/jpeg,image/png" style="display:none;">
+                                <button class="btn-purple" id="selectImageBtn">📁 选择照片</button>
+                                <button class="btn-secondary" id="clearImageBtn">🗑️ 清除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：单条操作区域 -->
+            <div class="control-panel">
+                <div class="card">
+                    <div class="card-header"><h3>✏️ 底库操作</h3></div>
+                    <div class="card-content">
+                        <label>👤 UID *</label>
+                        <input type="text" id="uid" placeholder="例如: xiaolaohu">
+                        <div class="form-row">
+                            <div><label>📛 姓名 *</label><input type="text" id="name" placeholder="姓名"></div>
+                            <div><label>⚥ 性别</label><select id="gender"><option value="boy">男</option><option value="girl">女</option></select></div>
+                        </div>
+                        <div class="form-row">
+                            <div><label>🎂 年龄</label><input type="number" id="age" value="1"></div>
+                            <div><label>🏫 班级</label><input type="text" id="class_id" placeholder="syxx-3-2" value="syxx-3-2"></div>
+                        </div>
+                        <div class="form-row">
+                            <div><label>📊 等级</label><input type="number" id="level" value="1"></div>
+                            <div><label>🆔 身份证号</label><input type="text" id="idno" placeholder="身份证号" value="1"></div>
+                        </div>
+                        <div id="statusMsg" class="status info">⚡ 等待操作...</div>
+                        <div class="btn-group">
+                            <button class="btn-warning" id="updateBtn">🔄 更新</button>
+                            <button class="btn-info" id="queryBtn">🔍 查询</button>
+                            <button class="btn-secondary" id="clearFormBtn">🧹 清空</button>
+                        </div>
+
+                        <div id="batchProgressContainer" class="progress-container" style="display:none;">
+                            <div id="batchProgressText">处理中...</div>
+                            <div class="progress-bar-bg">
+                                <div id="batchProgressFill" class="progress-bar-fill"></div>
+                            </div>
+                        </div>
+
+                        <div id="queryResult" style="display:none;" class="query-result">
+                            <h4>📄 查询结果</h4>
+                            <div id="queryContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 二次确认弹窗 -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="confirmTitle">⚠️ 确认操作</h3>
+            <p id="confirmMessage" style="margin:15px 0; line-height:1.6; font-size:13px;"></p>
+            <div class="modal-buttons">
+                <button class="btn-secondary" id="confirmCancelBtn">取消</button>
+                <button class="btn-danger" id="confirmOkBtn">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorToast" class="error-toast"></div>
+
+    <script>
+const m=b;(function(c,d){const l=b,e=c();while(!![]){try{const f=-parseInt(l(0x168))/0x1*(-parseInt(l(0x17f))/0x2)+parseInt(l(0x181))/0x3+-parseInt(l(0x169))/0x4*(parseInt(l(0x15a))/0x5)+parseInt(l(0x1c3))/0x6+parseInt(l(0x158))/0x7+-parseInt(l(0x172))/0x8+parseInt(l(0x150))/0x9*(-parseInt(l(0x129))/0xa);if(f===d)break;else e['push'](e['shift']());}catch(g){e['push'](e['shift']());}}}(a,0xc604b));const API_BASE=m(0x163),ADD_API=API_BASE+m(0x142),DELETE_API=API_BASE+'/api/v1/uid/known/delete',QUERY_API=API_BASE+m(0x1cf),video=document['getElementById'](m(0x1de)),canvas=document[m(0x177)]('canvas'),cameraPlaceholder=document[m(0x177)]('cameraPlaceholder'),cameraSelect=document[m(0x177)](m(0x1cd)),switchCameraBtn=document[m(0x177)](m(0x176)),startCameraBtn=document[m(0x177)](m(0x1e1)),takePhotoBtn=document[m(0x177)](m(0x1d6)),resetCameraBtn=document[m(0x177)]('resetCameraBtn'),selectImageBtn=document['getElementById'](m(0x1c8)),clearImageBtn=document[m(0x177)](m(0x1db)),imageUpload=document[m(0x177)](m(0x1d1)),uploadPlaceholder=document[m(0x177)](m(0x17a)),uploadPreviewArea=document[m(0x177)](m(0x135)),uploadPreviewImg=document[m(0x177)](m(0x188)),uidInput=document[m(0x177)](m(0x130)),nameInput=document['getElementById'](m(0x1ce)),genderSelect=document['getElementById']('gender'),ageInput=document['getElementById'](m(0x16b)),levelInput=document['getElementById'](m(0x175)),classIdInput=document[m(0x177)](m(0x146)),idnoInput=document[m(0x177)]('idno'),updateBtn=document[m(0x177)](m(0x120)),queryBtn=document[m(0x177)]('queryBtn'),clearFormBtn=document[m(0x177)](m(0x199)),statusMsg=document[m(0x177)](m(0x1a6)),queryResultDiv=document[m(0x177)]('queryResult'),queryContent=document['getElementById'](m(0x173)),errorToast=document['getElementById']('errorToast'),batchProgressContainer=document[m(0x177)](m(0x1a1)),batchProgressText=document[m(0x177)](m(0x1ae)),batchProgressFill=document[m(0x177)](m(0x1df)),confirmModal=document['getElementById'](m(0x1c4)),tabBtns=document[m(0x187)](m(0x1a3)),cameraTab=document[m(0x177)]('cameraTab'),uploadTab=document[m(0x177)](m(0x190));let stream=null,currentBase64='',currentImageSource=m(0x1e0),currentFacingMode=m(0x178),allVideoDevices=[],confirmResolve=null;function showStatus(c,d='info'){const n=m;statusMsg[n(0x17b)]=c,statusMsg[n(0x11d)]=n(0x18d)+d,d!==n(0x1d7)&&setTimeout(()=>{const o=n;statusMsg[o(0x11d)]===o(0x18d)+d&&(statusMsg[o(0x11d)]=o(0x147),statusMsg[o(0x17b)]='⚡\x20等待操作...');},0xfa0);}function showErrorToast(c){const p=m;errorToast[p(0x16c)]=c,errorToast[p(0x184)][p(0x118)]=p(0x16e),setTimeout(()=>errorToast[p(0x184)][p(0x118)]=p(0x1ca),0xbb8);}function escapeHtml(c){const q=m;if(!c)return'';return String(c)[q(0x148)](/[&<>]/g,d=>d==='&'?'&amp;':d==='<'?'&lt;':'&gt;');}function showConfirm(c,d,e,f){return new Promise(g=>{const r=b;confirmResolve=g,document[r(0x177)](r(0x1b7))[r(0x16c)]=c,document[r(0x177)](r(0x14b))['innerHTML']=d[r(0x148)](/\n/g,r(0x155));const h=document[r(0x177)]('confirmOkBtn');h[r(0x16c)]=e||'确认',h['className']=f||r(0x154),confirmModal['classList'][r(0x165)]('active');});}document[m(0x177)](m(0x1b3))[m(0x12f)](m(0x127),()=>{const s=m;confirmModal['classList'][s(0x13b)]('active'),confirmResolve&&(confirmResolve(!![]),confirmResolve=null);}),document['getElementById'](m(0x18f))[m(0x12f)](m(0x127),()=>{const t=m;confirmModal['classList'][t(0x13b)](t(0x140)),confirmResolve&&(confirmResolve(![]),confirmResolve=null);}),confirmModal[m(0x12f)]('click',c=>{const u=m;c['target']===confirmModal&&(confirmModal[u(0x1b5)][u(0x13b)]('active'),confirmResolve&&(confirmResolve(![]),confirmResolve=null));});async function getLocalStudents(){const v=m;if(!window[v(0x179)]||!window['electronAPI']['dbGetAll'])return[];try{return await window[v(0x179)][v(0x11f)]();}catch(c){return[];}}function a(){const a0=['ntbLAwfYD2q','CMvHzefZrgf0yvvsta','yMfJAW','ANnVBG','4P2miow6LEw6K+s4REAYOEACIEIVPvvjro+8JoAxOoAZLEABToAwSa','4O+ZioATO+wCQoAJGoAFPEw6LEw6KY4UlG','ywrKrxzLBNrmAxn0zw5LCG','DwLK','z2v0vhjHy2TZ','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7WN46ciow5ToM+HdWVzgL2pJXKAxyGy2XHC3m9iNf1zxj5lwrLDgfPBc12ywX1zsi+','DMLKzw9PBNb1Da','8j+tSsdLKi7NVA7MKytLG4/LPlq','DxbSB2fKuhjLDMLLD0fYzwe','DhjHBNnSyxrL','zgjezwXLDgu','DMLKzw9izwLNAhq','ue9tva','4PYfioAlJEEfP+AiKowkN++8JoEcUEwhU+oaJoABToAwSooaJEAmIEMsRUABToAwSow6LEw6KW','CMvTB3zL','y29UDgfPBNm','pgrPDIbZDhLSzt0IBwfYz2LUlxrVCdOXmhb4oYbWywrKAw5NlxrVCdOXmhb4oYbIB3jKzxiTDg9WoJjWEcbKyxnOzwqGi2rKzdSIpJXKAxyGC3r5Bgu9iMzVBNqTC2L6ztOXmNb4oYbJB2XVCJOJnJy2oYbMB250lxDLAwDODdPIB2XKoYbTyxjNAw4TyM90Dg9ToJzWEdSIpVcFK6eG5BQv5BQt5y+c6icd5PwW5O2Upc9KAxy+','8j+NUsdOOAJLJzxLT7lMUixNQBO','CgHVDg9qCMv2Awv3','ywn0AxzL','CgHVDg9tyxzL','l2fWAs92ms91AwqVA25VD24VywrK','DhLWzq','DxnLCG','CgHVDg9hzxrcyxnLnJq','y2XHC3nFAwq','C3rHDhvZigLUzM8','CMvWBgfJzq','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7WN5srifvjrdWVzgL2pJXKAxyGy2XHC3m9iNf1zxj5lwrLDgfPBc12ywX1zsi+','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7WN5o4ioEfP+EjHZWVzgL2pJXKAxyGy2XHC3m9iNf1zxj5lwrLDgfPBc12ywX1zsi+','y29UzMLYBu1LC3nHz2u','zw51BwvYyxrLrgv2AwnLCW','zgjvChnLCNq','y2HHBMDL','77Yi5BQv5BQt5PwW5O2U5l2C5lI65y+c6icd77Yj','mZu0nte4mwrrswnAvW','yM95','5Rwp6kEi5zMO5lIn5PsV5OYb5Pge5yop5As0','yxbWBgLJyxrPB24VANnVBG','yNrUlwrHBMDLCG','pgjYpG','z2LYBa','pc9KAxy+pc9KAxy+','mta0nZG5nZj1sfPxBe8','CMvTyxjR','mZeWnZe1B095ANre','CxvLCNLtzwXLy3rVCG','5P6A5lI+6k6+5Ash5AsX6lsLoG','C2v0vhjHBNnMB3jT','zNjVBNq','56gU6k6K5PU05PAW','BwvKAwfezxzPy2vZ','AwroDw1Izxi','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7MLBdMJA7MNAxMUPa8l2rPDJ48zgL2ignSyxnZpsjXDwvYEs1KzxrHAwWTDMfSDwuIihn0EwXLpsjJB2XVCJOJmJe5nKyZoYbMB250lxDLAwDODdPIB2XKoYi+5BQv5BQtpc9KAxy+pc9KAxy+','Ahr0CdOVlZe5mI4XnJGUmI4Ynda6oda4ma','z2v0vxnLCK1LzgLH','ywrK','A2LUza','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7WN4AuioI6Q+s7VEIVGEwpTZWVzgL2pJXKAxyGy2XHC3m9iNf1zxj5lwrLDgfPBc12ywX1zsi+','mta5odqXzMP5ENzm','ndrOs2XrCuS','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7IMQuG5OcN5yIRpc9KAxy+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxzHBhvLiJ4','ywDL','Aw5UzxjuzxH0','pc9WCMu+pc9KAxy+','yMXVy2S','iowYGtWVzgL2pJWVzgL2pG','6k+35ywi5BYa5zcV5Pge5yop5As0','zgf0yq','nJi3nZq0ohDlChvTva','CxvLCNLdB250zw50','y3jLyxrLrwXLBwvUDa','Bgv2zwW','C3DPDgnOq2fTzxjHqNrU','z2v0rwXLBwvUDej5swq','zw52AxjVBM1LBNq','zwXLy3rYB25bueK','DxbSB2fKugXHy2vOB2XKzxi','Aw5Uzxjive1m','8j+uHcdLT7lPH43NVA7VViZLJ6/KU6xPH43MLRdMI43NHAC','8j+tSsdLIy3NVA7MKytLG4/LPlq','4O+ZioATO+wCQoABToAwSow6LEw6KY4UlG','mK1WA0vesG','C3jJ','mZy3mdG2m2D6qxfKAa','5BQv5BQt5lIT5RkH5PYj6k+LvuLe77Ym5PEG5Rov5PU05PAW','AwnJyxjKBM8','C3r5Bgu','6k+35ywi5OUn54wN5OIw6ycj5OUP54wN54Mh','z2v0u2v0DgLUz3m','CxvLCNLtzwXLy3rVCKfSBa','DxbSB2fKuhjLDMLLD0LTzW','tM90qwXSB3DLzevYCM9Y','Bg9Hza','4PYfioABToAwSoAiKowkNZOG','6k+36ycj5OUP5Pge5yop5As0','C3rHDhvZia','C2nHBgu','y29UzMLYBunHBMnLBej0BG','DxbSB2fKvgfI','zgv2AwnLswq','icHvsuq6ia','5P+L6k+I5AsX6lsLoIa','5PYQ55+L6zsz6k+V','56gU5A6A6kAb5PU05PAW5A2M55sF44cm','BwvZC2fNzq','8j+tTYdMNypPMzdOOQVMI5i8yNi+phnWyw4GC3r5Bgu9iMzVBNqTC2L6ztOXmNb4oYi+6k+354k55yE75zYW5z2a5Qcp8j+uKUwBVUAGH++8JowfGEIUUoArHowdJ+wKTdWVC3bHBJ4','y29Kzq','y2XLyxjgB3jTqNrU','DxbSB2fK','z2v0vMLKzw9uCMfJA3m','C2L6zq','DhjPBq','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7WN5oBiowNK+wqJtWVzgL2pJXKAxyGy2XHC3m9iNf1zxj5lwrLDgfPBc12ywX1zsi+','C3L4Ec0Zlti','5Pge5yop5As0ia','yMf0y2HqCM9NCMvZC0nVBNrHAw5LCG','pc9KAxy+','lNrHyI1IDg4','zgf0ytPPBwfNzs9QCgvNo2jHC2u2ncW','vvnc','C3rHDhvZtxnN','5BQv5BQt5yIG6zMK5AsX6lsL77Ym5PEG5Rov57UN57UT5PU05PAW','zgf0ys10ywi','pgrPDIbZDhLSzt0Iy29SB3i6i2y0ndmZnJSGzM9UDc1ZAxPLoJe2ChG7igzVBNqTD2vPz2H0oMjVBgq7iJ7INyWG5RkH5PYjpc9KAxy+','DMfSDwu','CgHVDg9qyxrO','tM90rM91BMrfCNjVCG','5Pge5yop5As06zsz6k+VoG','yMf0y2HqCM9NCMvZC1rLEhq','z2vUzgvY','AwrUBW','DxnI','z2v0q29UDgv4Da','y29UzMLYBu9RqNrU','D2LKDgG','y2XHC3nmAxn0','DMLKzw9xAwr0Aa','y29UzMLYBvrPDgXL','44cncLvjrdOG','cGRMRAtMK43KVzZLSiBLHyJLIkdPMAtLUPxLUPpML6FORRdLVzxVViZLHO3MT7VLIQdMLRdORRdLVzxJGii','zMfJAw5Ntw9Kzq','5zU+54Mh6k+75y+w5AsX6lsL','C3rVCa','zMLSzxm','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7MLBdMJA7MNAxMUPa8l2rPDJ48zgL2ignSyxnZpsjXDwvYEs1KzxrHAwWTDMfSDwuIihn0EwXLpsjJB2XVCJOJnenbrJuWoYbMB250lxDLAwDODdPIB2XKoYi+5PYS5zYW5PwW5O2U5BQt','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7LUPxLUPpLP5pLKi08l2rPDJ48zgL2ignSyxnZpsjXDwvYEs1KzxrHAwWTDMfSDwuIpG','C3rYAw5NAwz5','yxbWzw5Kq2HPBgq','572r57UC6zsz6k+VoIa','oduXmdu0nezXD21uvG','y29UzMLYBu1VzgfS','C3bSAxq','Aw1N','zMLUza','C2vSzwn0sw1Hz2vcDg4','AgvPz2H0','BM9Uzq','B3b0Aw9U','4PYfioAFPEIVOUE7K+AENo+8MUACIq','y2fTzxjHu2vSzwn0','BMfTzq','l2fWAs92ms91AwqVCxvLCNKVDwLK','C3vJy2vZCW','Aw1Hz2vvCgXVywq','CMvZDwX0','B25SB2fK','4PYfioEfP+EjH+w3SUwkOoI9VE+8JoEcUEwhU+oaJoABToAwSooaJEAmIEMsRUABToAwSow6LEw6KW','4O+ZioIVT+AXGUArHowdJ+wKToADG+MzKc4UlG','DgfRzvbOB3rVqNrU','Aw5MBW','Bwf0y2G','Dg9eyxrHvvjm','zhjHD0LTywDL','y2XLyxjjBwfNzuj0BG','BwLYCM9Y','4P2mioAxOa','DMLKzw8','yMf0y2HqCM9NCMvZC0zPBgW','y2fTzxjH','C3rHCNrdyw1LCMfcDg4','6k+35AgR5yAzvuLe','Aw5JBhvKzxm','zgLZCgXHEq','zM9YrwfJAa','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7WN5okioETIEE6PZWVzgL2pJXKAxyGy2XHC3m9iNf1zxj5lwrLDgfPBc12ywX1zsi+','BgvUz3rO','Aw1Hz2uVANbLzW','y2XHC3noyw1L','pgrPDIbZDhLSzt0IBwfYz2LUlxrVCdOXmhb4oYbMB250lxnPEMu6mtfWEdSGy29SB3i6iZy2nJSIpUwoN+wNI+I/LowBNUAvSoAnRU+8MJXWCMuGC3r5Bgu9iNDOAxrLlxnWywnLoNbYzs13CMfWoYbMB250lxnPEMu6mtbWEdSIpG','zgjhzxrbBgW','DxbKyxrLqNrU','5zU+54Mh5lIn6io96lAf6l+hnu1c','CgHVDg9ezwXLDgu','5BYa5zcV5AsX6lsLoIa','pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlxjVDYi+pgrPDIbJBgfZCZ0ICxvLCNKTzgv0ywLSlwXHyMvSiJ7WN4+RioEpREE6PZWVzgL2pJXKAxyGy2XHC3m9iNf1zxj5lwrLDgfPBc12ywX1zsi+','pgrPDIbZDhLSzt0Iy29SB3i6iZrdquy1mdSGzM9UDc1ZAxPLoJe2ChG7igzVBNqTD2vPz2H0oMjVBgq7iJ7INiuG5PYjpc9KAxy+','zxjYB3i','y2XPy2S','pgrPDIbZDhLSzt0Iy29SB3i6CMvKoYi+5PYQ5OM+5yIW6k+LvuLe55Qe6k+M57Ug5l+H5OgVpc9KAxy+'];a=function(){return a0;};return a();}async function getLocalStudent(c){const w=m,d=await getLocalStudents();return d[w(0x1c7)](e=>e[w(0x130)]===c)||null;}async function upsertLocalStudent(c){const x=m;if(!window[x(0x179)]||!window['electronAPI'][x(0x14d)])return![];try{return await window[x(0x179)][x(0x14d)](c),!![];}catch(d){return![];}}async function deleteLocalStudent(c){const y=m;if(!window['electronAPI']||!window[y(0x179)][y(0x137)])return![];try{await window[y(0x179)]['dbDelete'](c);if(window[y(0x179)]['photoDelete'])await window['electronAPI'][y(0x122)](c);return!![];}catch(d){return![];}}async function saveLocalPhoto(c,d){const z=m;if(!window['electronAPI']||!window[z(0x179)][z(0x141)])return null;try{return await window[z(0x179)]['photoSave'](c,d);}catch(f){return null;}}async function getLocalPhotoBase64(c){const A=m;if(!window['electronAPI']||!window[A(0x179)][A(0x145)])return'';try{return await window[A(0x179)][A(0x145)](c)||'';}catch(d){return'';}}function showUploadPreview(c){const B=m;uploadPreviewImg[B(0x180)]=B(0x1a4)+c,uploadPreviewArea[B(0x184)][B(0x118)]=B(0x16e),uploadPlaceholder[B(0x184)]['display']=B(0x1ca);}function hideUploadPreview(){const C=m;uploadPreviewArea[C(0x184)]['display']=C(0x1ca),uploadPlaceholder[C(0x184)]['display']=C(0x16e),uploadPreviewImg['src']='';}async function enumerateDevices(){const D=m;try{const c=await navigator[D(0x160)][D(0x14c)]();return allVideoDevices=c['filter'](e=>e[D(0x166)]===D(0x133)),cameraSelect[D(0x17b)]='<option\x20value=\x22\x22>--\x20选择摄像头\x20--</option>',allVideoDevices[D(0x119)]((d,e)=>{const E=D,f=document[E(0x174)](E(0x1cb));f['value']=d[E(0x191)];let g=d['label']||E(0x1a0)+(e+0x1);if(g[E(0x1e3)](E(0x15e))||g[E(0x1e3)]('前置'))g=E(0x17d);if(g[E(0x1e3)](E(0x12b))||g[E(0x1e3)]('后置'))g=E(0x134);if(g[E(0x1e3)](E(0x1a5))||g[E(0x1e3)](E(0x1b1)))g='💻\x20USB摄像头';f['text']=g,cameraSelect[E(0x1c1)](f);}),cameraSelect[D(0x184)]['display']=allVideoDevices[D(0x11b)]>=0x2?'block':D(0x1ca),switchCameraBtn[D(0x184)]['display']=allVideoDevices['length']>=0x1?'block':D(0x1ca),allVideoDevices;}catch(d){return console['error'](D(0x15c),d),[];}}function setVideoMirror(){const F=m;if(!stream)return;const c=stream[F(0x19b)]()[0x0],d=c?.[F(0x186)]();if(d?.[F(0x1ba)]===F(0x144))video['classList'][F(0x165)](F(0x1dc));else video[F(0x1b5)][F(0x13b)](F(0x1dc));}async function startCamera(c=null,d=null){const G=m;try{if(!navigator['mediaDevices']||!navigator[G(0x160)][G(0x164)]){showErrorToast(G(0x152));return;}stream&&(stream[G(0x131)]()[G(0x119)](h=>h[G(0x1bc)]()),stream=null);let e={'video':!![]};if(c)e={'video':{'deviceId':{'exact':c}}};else{if(d)e={'video':{'facingMode':{'exact':d}}};}showStatus(G(0x1d5),'info'),stream=await navigator[G(0x160)][G(0x164)](e),video['srcObject']=stream,video[G(0x184)][G(0x118)]=G(0x16e),cameraPlaceholder[G(0x184)][G(0x118)]=G(0x1ca),await video['play'](),setVideoMirror(),await enumerateDevices();const f=stream[G(0x19b)]()[0x0],g=f?.[G(0x186)]();if(g?.['facingMode'])currentFacingMode=g['facingMode'];showStatus('✅\x20摄像头已开启',G(0x1d0));}catch(h){console[G(0x126)](G(0x1ad),h),video['style'][G(0x118)]='none',cameraPlaceholder[G(0x184)]['display']='block';if(h[G(0x1ce)]===G(0x189))showErrorToast('请允许摄像头权限'),cameraPlaceholder[G(0x17b)]=G(0x197);else h[G(0x1ce)]===G(0x1ac)?showErrorToast('未检测到摄像头'):showErrorToast(G(0x123)+h[G(0x196)]);}}async function switchCameraBySelect(){const H=m,c=cameraSelect[H(0x1aa)];if(!c){showStatus(H(0x18c),H(0x1d7));return;}await startCamera(c,null);}async function switchFrontBack(){const I=m,c=currentFacingMode===I(0x178)?I(0x144):I(0x178);await startCamera(null,c);}async function takePhotoOnly(){const J=m;if(!stream||!video[J(0x1b6)]){showErrorToast(J(0x170));return;}canvas[J(0x1b4)]=video['videoWidth'],canvas[J(0x1c9)]=video[J(0x138)];const c=canvas[J(0x1b2)]('2d');video[J(0x1b5)][J(0x13c)](J(0x1dc))&&(c[J(0x136)](canvas[J(0x1b4)],0x0),c[J(0x18e)](-0x1,0x1));c[J(0x1da)](video,0x0,0x0,canvas[J(0x1b4)],canvas[J(0x1c9)]);if(video['classList'][J(0x13c)]('mirror'))c[J(0x15d)](0x1,0x0,0x0,0x1,0x0,0x0);const d=canvas[J(0x1d9)](J(0x11c),0.9);currentBase64=d[J(0x1c5)](',')[0x1];const e=document[J(0x15b)]('.video-container'),f=document[J(0x177)](J(0x13f));if(f)f[J(0x13b)]();const g=document['createElement'](J(0x1c6));g['id']=J(0x13f),g[J(0x180)]=d,g[J(0x184)]['cssText']='width:100%;\x20border-radius:12px;\x20margin-top:10px;',e[J(0x1c1)](g),video[J(0x184)][J(0x118)]='none',showStatus(J(0x13a),J(0x1d0));}function resetCamera(){const K=m,c=document[K(0x177)]('photoPreview');if(c)c['remove']();stream?(video[K(0x184)][K(0x118)]=K(0x16e),showStatus(K(0x17c),'info')):startCamera();}function selectImage(){const L=m;imageUpload[L(0x127)]();}function handleImageUpload(c){const M=m,d=c['target'][M(0x1bd)][0x0];if(!d)return;if(!d[M(0x143)][M(0x1d8)]('image.*')){showErrorToast('请选择图片文件');return;}if(d[M(0x19c)]>0x5*0x400*0x400){showErrorToast(M(0x121));return;}const f=new FileReader();f[M(0x1d3)]=g=>{const N=M,h=g['target']['result'];currentBase64=h[N(0x1c5)](',')[0x1],showUploadPreview(currentBase64),showStatus(N(0x1d4),N(0x1d0));},f['onerror']=()=>showErrorToast(M(0x1bb)),f[M(0x12a)](d);}function clearImage(){const O=m;currentBase64='',hideUploadPreview(),imageUpload[O(0x1aa)]='',showStatus('🗑️\x20已清除照片',O(0x1d7));}async function checkUidExists(c){const P=m;try{const d=await fetch(QUERY_API,{'method':'POST','headers':{'Content-Type':P(0x153)},'body':JSON[P(0x1c0)]({'uid':c})}),e=await d[P(0x12c)]();return e[P(0x198)]===0x0&&e['data']&&(e['data'][P(0x1d2)]===!![]||e['data']['remark']);}catch(f){return![];}}function buildRequestBody(c,d,e,f,g,h,i,j){return{'uid':c,'remark':{'name':d,'gender':e,'age':parseInt(f)||0x1,'level':parseInt(g)||0x1,'class_id':h||'1','idno':i||'1'},'uface':j};}function b(c,d){c=c-0x118;const e=a();let f=e[c];if(b['YZFqLr']===undefined){var g=function(l){const m='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let n='',o='';for(let p=0x0,q,r,s=0x0;r=l['charAt'](s++);~r&&(q=p%0x4?q*0x40+r:r,p++%0x4)?n+=String['fromCharCode'](0xff&q>>(-0x2*p&0x6)):0x0){r=m['indexOf'](r);}for(let t=0x0,u=n['length'];t<u;t++){o+='%'+('00'+n['charCodeAt'](t)['toString'](0x10))['slice'](-0x2);}return decodeURIComponent(o);};b['xpbeqH']=g,b['LvTunh']={},b['YZFqLr']=!![];}const h=e[0x0],i=c+h,j=b['LvTunh'][i];return!j?(f=b['xpbeqH'](f),b['LvTunh'][i]=f):f=j,f;}function displayLocalDetail(c,e){const Q=m;let f=Q(0x1be)+(e?Q(0x14f):'')+'</div></div>';f+=Q(0x149)+escapeHtml(c[Q(0x130)])+Q(0x157),f+=Q(0x19e)+escapeHtml(c[Q(0x1ce)]||'-')+Q(0x157),f+=Q(0x16a)+(c[Q(0x1af)]===Q(0x156)?'女':'男')+Q(0x157),f+=Q(0x132)+(c[Q(0x16b)]||'-')+Q(0x16f),f+=Q(0x124)+escapeHtml(c[Q(0x11d)]||'-')+'</div></div>',f+=Q(0x11a)+(c['level']||'-')+Q(0x157),f+=Q(0x167)+escapeHtml(c[Q(0x161)]||'-')+Q(0x157),f+=Q(0x14a)+(c[Q(0x1ab)]?'✅\x20有':Q(0x1dd))+Q(0x157);if(e&&e['data']&&e[Q(0x171)][Q(0x159)]){const g=e['data']['remark'];f+=Q(0x13d),f+='<div\x20class=\x22query-detail-row\x22><div\x20class=\x22query-detail-label\x22>底库班级</div><div\x20class=\x22query-detail-value\x22>'+escapeHtml(g['class_id']||'-')+Q(0x157),f+=Q(0x1bf)+escapeHtml(g[Q(0x1ce)]||'-')+'</div></div>',f+=Q(0x1a2);}queryContent[Q(0x17b)]=f,queryResultDiv[Q(0x184)][Q(0x118)]='block';}function fillFormFromLocal(c){const R=m;nameInput['value']=c[R(0x1ce)]||'',genderSelect[R(0x1aa)]=c[R(0x1af)]==='girl'?R(0x156):R(0x151),ageInput[R(0x1aa)]=c[R(0x16b)]||0x1,levelInput[R(0x1aa)]=c[R(0x175)]||0x1,classIdInput['value']=c[R(0x11d)]||'syxx-3-2',idnoInput[R(0x1aa)]=c['idNumber']||'1';}function fillFormFromDepot(c){const S=m;let d=null;if(c[S(0x171)]&&c['data'][S(0x159)])d=c[S(0x171)][S(0x159)];else{if(c[S(0x171)]&&c['data'][S(0x1ce)])d=c['data'];else{if(c[S(0x159)])d=c[S(0x159)];else{if(c[S(0x1ce)])d=c;}}}if(!d)return;nameInput[S(0x1aa)]=d[S(0x1ce)]||'',genderSelect['value']=d[S(0x1af)]===S(0x156)?S(0x156):d[S(0x1af)]===S(0x151)?'boy':S(0x151),ageInput[S(0x1aa)]=d[S(0x16b)]||0x1,levelInput[S(0x1aa)]=d[S(0x175)]||0x1,classIdInput[S(0x1aa)]=d[S(0x146)]||S(0x19f),idnoInput[S(0x1aa)]=d[S(0x1b0)]||'1';}function displayQueryDetail(c){const T=m;let d=T(0x162),e=null;if(c[T(0x171)]&&c['data'][T(0x159)])e=c[T(0x171)][T(0x159)];else{if(c['data']&&c[T(0x171)][T(0x1ce)])e=c['data'];else{if(c['remark'])e=c[T(0x159)];else{if(c['name'])e=c;}}}e?(d+=T(0x149)+escapeHtml(uidInput[T(0x1aa)])+T(0x157),d+=T(0x19e)+escapeHtml(e[T(0x1ce)]||'-')+T(0x157),d+='<div\x20class=\x22query-detail-row\x22><div\x20class=\x22query-detail-label\x22>⚥\x20性别</div><div\x20class=\x22query-detail-value\x22>'+(e['gender']===T(0x151)?'男':e[T(0x1af)]===T(0x156)?'女':e[T(0x1af)]||'-')+T(0x157),d+='<div\x20class=\x22query-detail-row\x22><div\x20class=\x22query-detail-label\x22>🎂\x20年龄</div><div\x20class=\x22query-detail-value\x22>'+(e[T(0x16b)]||'-')+T(0x16f),d+='<div\x20class=\x22query-detail-row\x22><div\x20class=\x22query-detail-label\x22>🏫\x20班级</div><div\x20class=\x22query-detail-value\x22>'+escapeHtml(e['class_id']||'-')+T(0x157),d+=T(0x11a)+(e[T(0x175)]||'-')+T(0x157),d+=T(0x167)+escapeHtml(e[T(0x1b0)]||'-')+'</div></div>',d+='<div\x20class=\x22query-detail-row\x22><div\x20class=\x22query-detail-label\x22>💳\x20IC卡号</div><div\x20class=\x22query-detail-value\x22>'+escapeHtml(e[T(0x183)]||'-')+T(0x157)):(d+=T(0x128),d+=T(0x11e)+JSON[T(0x1c0)](c,null,0x2)+T(0x16d)),queryContent[T(0x17b)]=d,queryResultDiv[T(0x184)][T(0x118)]=T(0x16e);}async function updateToDatabase(){const U=m,c=uidInput[U(0x1aa)]['trim'](),d=nameInput[U(0x1aa)]['trim']();if(!c){showErrorToast(U(0x1e2));return;}if(!d){showErrorToast('请填写姓名');return;}if(!currentBase64){showErrorToast(U(0x185));return;}showStatus(U(0x12e),U(0x1d7));try{const e=await checkUidExists(c);if(!e){showErrorToast(U(0x182)),showStatus(U(0x12d),'error');return;}const f=await showConfirm(U(0x15f),U(0x195)+d+U(0x1b8)+c+U(0x1b9));if(!f)return;showStatus(U(0x17e),'info');const g=await fetch(DELETE_API,{'method':U(0x139),'headers':{'Content-Type':'application/json'},'body':JSON['stringify']({'uid':c,'forceDelete':!![]})});if(!g['ok']){showErrorToast(U(0x1a7));return;}await new Promise(k=>setTimeout(k,0xc8));const h=buildRequestBody(c,d,genderSelect[U(0x1aa)],ageInput[U(0x1aa)],levelInput['value'],classIdInput[U(0x1aa)],idnoInput[U(0x1aa)],currentBase64),i=await fetch(ADD_API,{'method':U(0x139),'headers':{'Content-Type':U(0x153)},'body':JSON[U(0x1c0)](h)}),j=await i['json']();if(!i['ok']||j[U(0x198)]!==0x0&&j['code']!==0xc8&&j['code']!==undefined){showErrorToast('底库添加失败:\x20'+(j[U(0x196)]||U(0x194)));return;}showStatus(U(0x18b)+d+U(0x192)+c+')',U(0x1d0)),clearForm();if(currentImageSource===U(0x1e0))resetCamera();else clearImage();queryResultDiv[U(0x184)][U(0x118)]=U(0x1ca);}catch(k){showErrorToast(U(0x1c2)+k['message']);}}async function queryDatabase(){const V=m,c=uidInput[V(0x1aa)][V(0x19d)]();if(!c){showErrorToast('请填写UID');return;}showStatus('⏳\x20查询中...','info'),queryResultDiv[V(0x184)][V(0x118)]='none';try{const d=await fetch(QUERY_API,{'method':V(0x139),'headers':{'Content-Type':V(0x153)},'body':JSON[V(0x1c0)]({'uid':c})}),e=await d[V(0x12c)](),f=d['ok']&&e[V(0x198)]===0x0&&e[V(0x171)]&&(e[V(0x171)]['result']===!![]||e['data'][V(0x159)]);f?(queryContent[V(0x17b)]=V(0x125),showStatus(V(0x1cc),V(0x1d0))):(queryContent[V(0x17b)]=V(0x1a9),showStatus('❌\x20查询结果：没有','warning')),queryResultDiv['style'][V(0x118)]=V(0x16e);}catch(g){showErrorToast(V(0x193)+g['message']);}}function clearForm(){const W=m;uidInput[W(0x1aa)]='',nameInput[W(0x1aa)]='',genderSelect[W(0x1aa)]=W(0x151),ageInput['value']='1',levelInput[W(0x1aa)]='1',classIdInput[W(0x1aa)]=W(0x19f),idnoInput[W(0x1aa)]='1',queryResultDiv['style'][W(0x118)]=W(0x1ca),showStatus(W(0x13e),W(0x1d7));}tabBtns[m(0x119)](c=>{const X=m;c[X(0x12f)]('click',()=>{const Y=X;tabBtns[Y(0x119)](e=>e['classList'][Y(0x13b)]('active')),c[Y(0x1b5)]['add']('active');const d=c['getAttribute'](Y(0x1a8));if(d==='camera')cameraTab['classList'][Y(0x165)]('active'),uploadTab[Y(0x1b5)][Y(0x13b)](Y(0x140)),currentImageSource=Y(0x1e0);else{cameraTab['classList']['remove'](Y(0x140)),uploadTab[Y(0x1b5)][Y(0x165)](Y(0x140)),currentImageSource=Y(0x19a);if(stream){stream[Y(0x131)]()['forEach'](f=>f[Y(0x1bc)]()),stream=null,video[Y(0x184)][Y(0x118)]=Y(0x1ca),cameraPlaceholder['style']['display']=Y(0x16e);const e=document[Y(0x177)](Y(0x13f));if(e)e[Y(0x13b)]();}}});}),startCameraBtn['addEventListener']('click',()=>startCamera()),cameraSelect['addEventListener'](m(0x14e),switchCameraBySelect),switchCameraBtn[m(0x12f)](m(0x127),switchFrontBack),takePhotoBtn[m(0x12f)](m(0x127),takePhotoOnly),resetCameraBtn[m(0x12f)](m(0x127),resetCamera),selectImageBtn['addEventListener'](m(0x127),selectImage),clearImageBtn[m(0x12f)](m(0x127),clearImage),imageUpload['addEventListener'](m(0x14e),handleImageUpload),updateBtn[m(0x12f)](m(0x127),updateToDatabase),queryBtn[m(0x12f)]('click',queryDatabase),clearFormBtn[m(0x12f)]('click',clearForm),window['addEventListener'](m(0x18a),()=>{const Z=m;showStatus('⚡\x20功能说明：填写UID和姓名，拍照/选图后点击「更新」只同步底库',Z(0x1d7));});
+</script>
+    <script>
+    (function(){
+        var el = document.getElementById('schoolNameDisplay');
+        if(el){
+            var x = new XMLHttpRequest();
+            x.open('GET','config.json',true);
+            x.onload = function(){
+                if(x.status === 200){
+                    try{ var c = JSON.parse(x.responseText); el.textContent = c.schoolName || ''; }catch(e){}
+                }
+            };
+            x.send();
+        }
+    })();
+    </script>
+</body>
+</html>
